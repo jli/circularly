@@ -13,9 +13,9 @@
 //
 // h/t https://github.com/shiffman/The-Nature-of-Code-Examples/blob/master/chp06_agents/NOC_6_09_Flocking/Boid.pde
 
-const GROUP_SIZE_RANDBOUND = [50, 150];
-const NUM_GROUPS_RANDBOUND = [2, 5];
-const NODE_SIZE_RANDBOUND = [6, 13];
+const GROUP_SIZE_RANDBOUND = [150, 300];
+const NUM_GROUPS_RANDBOUND = [2, 2];
+const NODE_SIZE_RANDBOUND = [10, 15];
 
 let DEBUG_NEIGHBORS = false;
 let DEBUG_DISTANCE = false;
