@@ -13,9 +13,9 @@
 //
 // h/t https://github.com/shiffman/The-Nature-of-Code-Examples/blob/master/chp06_agents/NOC_6_09_Flocking/Boid.pde
 
-const GROUP_SIZE_RANDBOUND = [150, 300];
+const GROUP_SIZE_RANDBOUND = [100, 200];
 const NUM_GROUPS_RANDBOUND = [2, 2];
-const NODE_SIZE_RANDBOUND = [10, 15];
+const NODE_SIZE_RANDBOUND = [6, 10];
 
 let DEBUG_NEIGHBORS = false;
 let DEBUG_DISTANCE = false;
@@ -253,6 +253,8 @@ function setup() {
   MAX_FORCE = make_slider('max force', 0, 1, .3, .02, CONTROLS);
   NUM_NEIGHBORS = make_slider('# neighbors', 1, 50, 8, 1, CONTROLS);
   NF_NUM_NEIGHBORS = make_slider('# nf neighbors', 1, 50, 3, 1, CONTROLS);
+
+  toggle_controls();
 
   init_node_flocks();
 }
