@@ -19,7 +19,7 @@ const GROUP_SIZE_RANDBOUND = [50, 150];
 //const NUM_GROUPS_RANDBOUND = [2, 5];
 //const NODE_SIZE_RANDBOUND = [6, 13];
 const NUM_GROUPS_RANDBOUND = [2, 3];
-const NODE_SIZE_RANDBOUND = [5, 10];
+const NODE_SIZE_RANDBOUND = [3, 10];
 // When increasing/decreasing flock sizes, change by this frac of existing size.
 const FLOCK_SIZE_CHANGE_FRAC = 0.1;
 
