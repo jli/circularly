@@ -3,12 +3,11 @@
 // TODO:
 // - behavior:
 // - display:
-//   - try to make colors more distinct
-//   - make hue shift more uniform across hue spectrum
 //   - less bleh control panel
 // - misc:
 //   - module-ify quadtree?
 //   - add icon for manifest... https://developers.google.com/web/fundamentals/web-app-manifest/
+//   - make random movement less jittery.
 
 let FLOCKS = [];
 
@@ -21,43 +20,64 @@ const NODE_SIZE_RANDBOUND = MOBILE ? [4, 7] : [6, 12];
 // When increasing/decreasing flock sizes, change by this frac of existing size.
 const FLOCK_SIZE_CHANGE_FRAC = 0.1;
 const SPEED_LIMIT_MULT = 10;
+let SPEED_AVG_WEIGHT = 0.90;
+let SPEED_CUR_WEIGHT = 0.1;
 let TOUCH_RAD = 70;
 
 // Control panel input elements.
 let PAUSED = false;
-let SPEED;
-let ZOOM;
-let DEBUG_FORCE;
-let DEBUG_NEIGHBORS;
-let SURROUND_OR_CLOSEST;
-let DEBUG_DISTANCE;
-let DEBUG_QUADTREE;
-let CIRCLES;
-let NF_SEPARATION_FORCE;
-let SEPARATION_FORCE;
-let COHESION_FORCE;
-let ALIGNMENT_FORCE;
-let MAX_FORCE;
-let NATURAL_SPEED_WEIGHT;
-let SPACE_AWARE_MULT;
-let NUM_NEIGHBORS;
-let NF_NUM_NEIGHBORS;
-let RAND_MOVE_FREQ;
-let RAND_MOVE_MULT;
-let MOUSE_REPEL;
+let I_SPEED_MULT;
+let I_ZOOM;
+let I_MOUSE_REPEL;
+let I_CIRCLES;
+let I_BACKGROUND;
+let I_SURROUND_OR_CLOSEST;
+let I_DEBUG_FORCE;
+let I_DEBUG_NEIGHBORS;
+let I_DEBUG_DISTANCE;
+let I_DEBUG_QUADTREE;
+
+let I_NF_SEPARATION_FORCE;
+let I_SEPARATION_FORCE;
+let I_COHESION_FORCE;
+let I_ALIGNMENT_FORCE;
+let I_MAX_FORCE;
+let I_NATURAL_SPEED_WEIGHT;
+let I_SPACE_AWARE_MULT;
+let I_NUM_NEIGHBORS;
+let I_NF_NUM_NEIGHBORS;
+let I_RAND_MOVE_FREQ;
+let I_RAND_MOVE_MULT;
+
+
+// Note: has high saturation and brightness minimums.
+let RAND_HUE;  // initialized in setup.
+function rand_color() {
+  const c = color(RAND_HUE, random(85, 100), random(80, 85));
+  RAND_HUE = (RAND_HUE + random(60, 100)) % 360;
+  return c;
+}
 
 function rand_position() { return createVector(random(0, width), random(0, height)); }
-// Note: has high saturation and brightness minimums.
-function rand_color() { return color(random(0, 360), random(85, 100), random(80, 85)); }
 
 // Plus 1 for int upper bound so that bounds are inclusive.
 function rand_bound(bounds) { return floor(random(bounds[0], bounds[1] + 1)); }
 
-function hue_shift(col, mult) {
-  return color((hue(col) * mult) % 360, saturation(col), brightness(col));
+function map2(x, dom_lo, dom_mid, dom_hi, rng_lo, rng_mid, rng_hi) {
+  if (x >= dom_mid) { return map(x, dom_mid, dom_hi, rng_mid, rng_hi); }
+  else { return map(x, dom_lo, dom_mid, rng_lo, rng_mid); }
 }
-function bright_shift(col, mult) {
-  return color(hue(col), saturation(col), constrain(brightness(col) * mult, 0, 100));
+
+// Note: the effect is highly dependent on SPEED_{AVG,CUR}_WEIGHT. Oh well.
+function relspeed_color_shift(col, relspeed) {
+  let h = hue(col), s = saturation(col), b = brightness(col);
+
+  const hue_delta = constrain(map(relspeed, 0.5, 1.5, -50, 50), -100, 100);
+  h = h + hue_delta % 360;
+
+  b = constrain(b * map2(relspeed, 0.5, 1.0, 1.2,  0.25, 1.0, 2.0), 10, 100);
+
+  return color(h, s, b);
 }
 
 function draw_triangle(middle, dir, size) {
@@ -102,34 +122,28 @@ class Node {
     this.pos = pos; this.vel = vel;
     this.space_need = space_need;
     this.col = col; this.size = size;
-    this.natural_speed = this.vel.mag();
-    this.speed_avg = this.natural_speed;
+    this.speed_avg = this.speed_cur = this.natural_speed = this.vel.mag();
   }
   copy() {
     return new Node(this.id, this.flock_id, this.pos.copy(), this.vel.copy(),
                     this.space_need, this.col, this.size);
   }
   get speed_limit() { return this.natural_speed * SPEED_LIMIT_MULT; }
-  get zspace_need() { return this.space_need * ZOOM; }
-  get debugf() { return DEBUG_FORCE && this.id === 0; }
+  get zspace_need() { return this.space_need * I_ZOOM.value; }
+  get debugf() { return I_DEBUG_FORCE.value && this.id === 0; }
 
   draw_shape() {
-    const siz = this.size * ZOOM;
-    if (CIRCLES) { ellipse(this.pos.x, this.pos.y, siz, siz); }
+    const siz = this.size * I_ZOOM.value;
+    if (I_CIRCLES.value) { ellipse(this.pos.x, this.pos.y, siz, siz); }
     else { draw_triangle(this.pos, this.vel, siz); }
   }
 
   draw() {
     noStroke();
     if (this.debugf) { fill(100); }
-    else {
-      const relvel = this.speed_avg / this.natural_speed;
-      let hshift = constrain(relvel, 0.9, 1.1);
-      let bshift = constrain(relvel, 0.6, 2);
-      fill(bright_shift(hue_shift(this.col, hshift), bshift));
-    }
+    else { fill(relspeed_color_shift(this.col, this.speed_cur/this.speed_avg)); }
     this.draw_shape();
-    if (DEBUG_DISTANCE) {
+    if (I_DEBUG_DISTANCE.value) {
       noFill();
       strokeWeight(0.5);
       stroke(this.id === 0 ? 85 : 35);
@@ -140,7 +154,7 @@ class Node {
       if (this.id === 0) {
         stroke(110, 80, 60);
         // Here, we do properly draw the radius since we're only showing 1 side.
-        const s = 2 * SPACE_AWARE_MULT * this.zspace_need;
+        const s = 2 * I_SPACE_AWARE_MULT.value * this.zspace_need;
         ellipse(this.pos.x, this.pos.y, s, s);
         line(this.pos.x, this.pos.y, this.pos.x + s/2, this.pos.y);
       }
@@ -151,7 +165,7 @@ class Node {
     // same flock and not-same flock
     const nodes_and_dists_sf = [];
     const nodes_and_dists_nf = [];
-    const max_dist = SPACE_AWARE_MULT * this.zspace_need;
+    const max_dist = I_SPACE_AWARE_MULT.value * this.zspace_need;
     const near = qt.queryCenter(this.pos, max_dist, max_dist);
     for (const [other, _] of near) {
       const same_flock = this.flock_id === other.flock_id;
@@ -162,15 +176,15 @@ class Node {
         else { nodes_and_dists_nf.push([other, dist]); }
       }
     }
-    nodes_and_dists_sf.sort((a, b) => a[1] - b[1]).splice(NUM_NEIGHBORS);
-    nodes_and_dists_nf.sort((a, b) => a[1] - b[1]).splice(NF_NUM_NEIGHBORS);
+    nodes_and_dists_sf.sort((a, b) => a[1] - b[1]).splice(I_NUM_NEIGHBORS.value);
+    nodes_and_dists_nf.sort((a, b) => a[1] - b[1]).splice(I_NF_NUM_NEIGHBORS.value);
     return nodes_and_dists_sf.concat(nodes_and_dists_nf);
   }
 
   get_surrounding_nodes(flocks, qt) {
     // HACK: reusing existing sliders...
-    const num_segments = NUM_NEIGHBORS;
-    const num_per_segment = NF_NUM_NEIGHBORS;
+    const num_segments = I_NUM_NEIGHBORS.value;
+    const num_per_segment = I_NF_NUM_NEIGHBORS.value;
     const rad_per_segment = 2 * PI / num_segments;
     const nodes_and_dists_per_segment = [];
     // Initialize.
@@ -179,7 +193,7 @@ class Node {
     // we still do that? if we don't then neighbors from flocks w/ greater space
     // need react to this node before this node reacts to it. could add some
     // safety factor to account, maybe? bleh.
-    const max_dist = SPACE_AWARE_MULT * this.zspace_need;
+    const max_dist = I_SPACE_AWARE_MULT.value * this.zspace_need;
     const near = qt.queryCenter(this.pos, max_dist, max_dist);
     for (const [other, _] of near) {
       if (this.flock_id === other.flock_id && this.id === other.id) continue;
@@ -199,12 +213,12 @@ class Node {
   }
 
   update(flocks, qt, mouse_pos) {
-    const nearby_nodes = (SURROUND_OR_CLOSEST
+    const nearby_nodes = (I_SURROUND_OR_CLOSEST.value
                           ? this.get_surrounding_nodes(flocks, qt)
                           : this.get_nearest_nodes(flocks, qt));
 
     const curspeed = this.vel.mag();
-    const max_space_awareness = SPACE_AWARE_MULT * this.zspace_need;
+    const max_space_awareness = I_SPACE_AWARE_MULT.value * this.zspace_need;
     const sep_force = createVector(); let sep_n = 0;
     const ali_force = createVector(); let ali_n = 0;
     for (const [other, dist] of nearby_nodes) {
@@ -215,16 +229,16 @@ class Node {
       const away = p5.Vector.sub(this.pos, other.pos).normalize();
       if (same_flock) {
         sep_force.add(away.copy().mult(
-          SEPARATION_FORCE * curspeed * sep_force_num / pow(dist, 2)
-          - COHESION_FORCE * curspeed * dist / this.zspace_need
+          I_SEPARATION_FORCE.value * curspeed * sep_force_num / sq(dist)
+          - I_COHESION_FORCE.value * curspeed * dist / this.zspace_need
         )); ++sep_n;
         ali_force.add(other.vel); ++ali_n;
       } else {
         sep_force.add(away.copy().mult(
-          NF_SEPARATION_FORCE * curspeed * sep_force_num / pow(dist, 2)
+          I_NF_SEPARATION_FORCE.value * curspeed * sep_force_num / pow(dist, 2)
         )); ++sep_n;
       }
-      if (DEBUG_NEIGHBORS && (!DEBUG_FORCE || this.debugf)) {
+      if (I_DEBUG_NEIGHBORS.value && (!I_DEBUG_FORCE.value || this.debugf)) {
         if (same_flock && dist < this.zspace_need) {
           strokeWeight(2);
           stroke(330, 90, map(dist, 3, this.zspace_need, 100, 40));
@@ -248,39 +262,37 @@ class Node {
       // some radius.
       const away = this.pos.copy().sub(mouse_pos);
       const dist_sq = away.magSq();
-      if (MOUSE_REPEL && dist_sq < sq(TOUCH_RAD)) {
+      if (I_MOUSE_REPEL.value && dist_sq < sq(TOUCH_RAD)) {
         ++sep_n;
         sep_force.add(away.setMag(
-          10 * SEPARATION_FORCE * curspeed * TOUCH_RAD * this.zspace_need / dist_sq));
-      } else if (!MOUSE_REPEL) {
+          50 * I_SEPARATION_FORCE.value * curspeed * TOUCH_RAD * this.zspace_need / dist_sq));
+      } else if (!I_MOUSE_REPEL.value) {
         ++sep_n;
         sep_force.add(away.setMag(
-          -2 * COHESION_FORCE * curspeed * log(dist_sq) / this.zspace_need));
+          -2 * I_COHESION_FORCE.value * curspeed * log(dist_sq) / this.zspace_need));
       }
     }
 
     const tot_force = createVector();
     if (sep_n) { tot_force.add(sep_force.div(sep_n)); }
-    if (ali_n) {
-      ali_force.div(ali_n).sub(this.vel);
-      tot_force.add(ali_force.mult(ALIGNMENT_FORCE));
-    }
+    if (ali_n) { tot_force.add(ali_force.div(ali_n).sub(this.vel).mult(I_ALIGNMENT_FORCE.value)); }
     if (this.debugf) {
       const dpos = createVector(this.pos.x - 10, this.pos.y + 10);
       fill(0, 90, 90); draw_triangle(dpos, sep_force, sep_force.mag() * 10);
       fill(120, 90, 90); draw_triangle(dpos, ali_force, ali_force.mag() * 10);
     }
 
-    this.vel.add(tot_force.limit(MAX_FORCE));
-    if (random(1) < RAND_MOVE_FREQ) {
-      this.vel.add(p5.Vector.random2D().setMag(this.vel.mag() * RAND_MOVE_MULT));
+    this.vel.add(tot_force.limit(I_MAX_FORCE.value));
+    if (random(1) < I_RAND_MOVE_FREQ.value) {
+      this.vel.add(p5.Vector.random2D().mult(curspeed * I_RAND_MOVE_MULT.value));
     }
-    const nsw = NATURAL_SPEED_WEIGHT;
+    const nsw = I_NATURAL_SPEED_WEIGHT.value;
     const mag = min(this.vel.mag() * (1-nsw) + this.natural_speed * nsw, this.speed_limit);
     this.vel.setMag(mag);
-    const speed_avg_weight = 0.5;
-    this.speed_avg = mag * (1-speed_avg_weight) + this.speed_avg * speed_avg_weight;
-    this.pos.add(this.vel.copy().mult(SPEED));
+    this.speed_cur = lerp(this.speed_cur, mag, 1-SPEED_CUR_WEIGHT);
+    this.speed_avg = lerp(this.speed_avg, mag, 1-SPEED_AVG_WEIGHT);
+
+    this.pos.add(this.vel.copy().mult(I_SPEED_MULT.value));
     wrap_vector(this.pos);
   }
 }  // Node
@@ -289,8 +301,8 @@ function create_random_flock(flock_id) {
   const flock = [];
   const c = rand_color();
   const size = rand_bound(NODE_SIZE_RANDBOUND);
+  // TODO: make space_need or speed match size?
   const space_need = size * 2 * random(0.8, 1.2);
-  // TODO: make speed variant match size, with smaller being faster, or vice versa?
   const speed = rand_bound(SPEED_RANDBOUND);
   const pos = rand_position();
   const vel = p5.Vector.random2D().mult(speed);
@@ -300,7 +312,7 @@ function create_random_flock(flock_id) {
     // Note: speed set to same value.
     const velfuzzed = p5.Vector.random2D().mult(speed/3).add(vel).setMag(speed);
     flock.push(new Node(i, flock_id, posfuzzed, velfuzzed, space_need,
-                        hue_shift(c, random(0.97, 1.03)), size * random(0.8, 1.2)));
+                        c, size * random(0.8, 1.2)));
   }
   return flock;
 }
@@ -322,32 +334,19 @@ function copy_flocks_build_quadtree(flocks) {
 }
 
 function setup() {
-  createCanvas(windowWidth, windowHeight);
+  RAND_HUE = random(0, 360);
   frameRate(25);
   colorMode(HSB);
-
-  create_control_panel();
-  setTimeout(toggle_control_panel, 1000);
+  createCanvas(windowWidth, windowHeight);
+  create_control_panel(); setTimeout(toggle_control_panel, 1000);
   init_node_flocks();
 }
 
-function windowResized() { resizeCanvas(windowWidth, windowHeight); }
-
-// Note: we need touchMoved() to return false in order for touch interactions to
-// work on mobile. However, this also disables the ability to use the sliders in
-// the control panel. Sooo, we toggle this value depending on whether the
-// control  panel is shown.
-let ALLOW_TOUCH_MOVED = false;
-function touchMoved() { return ALLOW_TOUCH_MOVED; }
-
 function draw() {
-  background(225, 22, 7);
+  if (I_BACKGROUND.value) background(225, 22, 5);
+
   let mouse_pos = mouseIsPressed ? createVector(mouseX, mouseY) : null;
   if (touches.length > 0) {
-    // HACK: with 2 touches, always attract.
-    if (touches.length > 1) {
-      MOUSE_REPEL = false; MOUSE_REPEL_CHECKBOX.checked(false);
-    }
     mouse_pos = createVector();
     for (const {x,y} of touches) {
       mouse_pos.add(createVector(x, y));
@@ -365,17 +364,13 @@ function draw() {
   }
 
   if (mouse_pos) {
-    strokeWeight(1);
-    if (MOUSE_REPEL) {
-      stroke(0, 100, 30); fill(350, 90, 60, .10);
-      ellipse(mouse_pos.x, mouse_pos.y, TOUCH_RAD*2, TOUCH_RAD*2);
-    } else {
-      stroke(120, 100, 20); fill(110, 90, 60, .10);
-      ellipse(mouse_pos.x, mouse_pos.y, TOUCH_RAD/2, TOUCH_RAD/2);
-    }
+    strokeWeight(1); noFill(); let size;
+    if (I_MOUSE_REPEL.value) { stroke(0, 100, 30); size = TOUCH_RAD*2; }
+    else { stroke(120, 100, 20); size = TOUCH_RAD/2; }
+    ellipse(mouse_pos.x, mouse_pos.y, size, size);
   }
 
-  if (DEBUG_QUADTREE) draw_quadtree(qt, 0);
+  if (I_DEBUG_QUADTREE.value) draw_quadtree(qt, 0);
 }
 
 function draw_quadtree(tree, level) {
@@ -392,6 +387,22 @@ function draw_quadtree(tree, level) {
   }
 }
 
+function windowResized() { resizeCanvas(windowWidth, windowHeight); }
+
+// Note: we need touchMoved() to return false in order for touch interactions to
+// work on mobile. However, this also disables the ability to use the sliders in
+// the control panel. Sooo, we toggle this value depending on whether the
+// control  panel is shown.
+let ALLOW_TOUCH_MOVED = false;
+function touchMoved() { return ALLOW_TOUCH_MOVED; }
+
+function touchStarted() {
+  switch (touches.length) {
+    case 3: I_MOUSE_REPEL.toggle(); break;
+    case 4: init_node_flocks(); break;
+  }
+}
+
 function keyPressed() {
   switch (key) {
     case 'p': toggle_paused(); break;
@@ -403,11 +414,6 @@ function keyPressed() {
 function toggle_paused() {
   PAUSED = !PAUSED;
   if (PAUSED) { noLoop(); } else { loop(); }
-}
-
-function update_count_displays() {
-  NUM_FLOCKS_ELT.html(`# flocks [${FLOCKS.length}]`);
-  NUM_NODES_ELT.html(`# nodes [${FLOCKS.map(a=>a.length).reduce((a,b)=>a+b, 0)}]`);
 }
 
 function change_num_flocks(dir) {
@@ -433,7 +439,7 @@ function change_flock_size(dir) {
       for (let i = orig_length; i < orig_length + num_to_add; ++i) {
         const example = flock[int(random(flock.length))];
         const pos = example.pos.copy().add(p5.Vector.random2D().mult(example.space_need));
-        const vel = example.vel.copy().rotate(random(2*PI));
+        const vel = example.vel.copy().rotate(random(-PI/3, PI/3));
         flock.push(new Node(i, example.flock_id, pos, vel, example.space_need, example.col, example.size));
       }
     } else {
@@ -444,62 +450,14 @@ function change_flock_size(dir) {
   update_count_displays();
 }
 
-// Creates slider with label, including display of value.
-function make_slider(label, min, max, startval, step, parent, updatefn) {
-  const container = createDiv().parent(parent);
-  const labelelt = createSpan(`${label} [${startval}]`).parent(container);
-  const slider = createSlider(min, max, startval, step).parent(container);
-  slider.input((e) => {
-    const val = e.target.valueAsNumber;
-    labelelt.html(`${label} [${val}]`);
-    if (updatefn) updatefn(val);
-  });
-  if (updatefn) updatefn(startval);
-  return slider;
-}
-
-// Creates number input with label.
-function make_number_input(label, min, max, startval, step, size, parent, updatefn) {
-  const container = createDiv().parent(parent);
-  createSpan(label + ' ').parent(container);
-  const input = createInput(str(startval), 'number').parent(container);
-  if (min !== null) input.attribute('min', min);
-  if (max !== null) input.attribute('max', max);
-  if (step !== null) input.attribute('step', step);
-  if (size !== null) input.size(size);
-  if (updatefn) {
-    input.input((e) => { updatefn(e.target.valueAsNumber) });
-    updatefn(startval);
-  }
-  return input;
-}
-
-function make_checkbox(label, startval, parent, updatefn) {
-  const checkbox = createCheckbox(label, startval).parent(parent);
-  if (updatefn) {
-    // Note: input() works on desktop (mouse, keyboard), but not mobile :-/.
-    checkbox.changed((e) => updatefn(e.target.checked));
-    updatefn(startval);
-  }
-  return checkbox;
-}
-
-// Creates button. 'f' is both mousePressed and keydown (space, enter) handle.
-function make_button(label, parent, f) {
-  const b = createButton(label).parent(parent);
-  b.mousePressed(f);
-  b.elt.onkeydown = (e) => {
-    if (e.key === ' ' || e.key === 'Enter') {
-      // e.preventDefault();  // is this needed/useful?
-      f();
-    }
-  }
-  return b;
-}
-
 let CONTROL_PANEL;
 let TOGGLE_CONTROL_PANEL_BUTTON;
-let NUM_FLOCKS_ELT, NUM_NODES_ELT, FRAMERATE_ELT, MOUSE_REPEL_CHECKBOX;
+let NUM_FLOCKS_ELT, NUM_NODES_ELT, FRAMERATE_ELT;
+
+function update_count_displays() {
+  NUM_FLOCKS_ELT.html(`flocks [${FLOCKS.length}] `);
+  NUM_NODES_ELT.html(`nodes [${FLOCKS.map(a=>a.length).reduce((a,b)=>a+b, 0)}] `);
+}
 
 function toggle_control_panel() {
   if (CONTROL_PANEL.attribute('status') === 'hidden') {
@@ -526,12 +484,9 @@ function create_control_panel() {
   // Basic controls: pause, reinit, change speed, size, # flocks.
   const basic_controls = createDiv().parent(main);
   const br = () => createElement('br').parent(basic_controls);
-  if (fullscreen_supported())
-    make_button('full', basic_controls, toggle_fullscreen);
-  make_button('pause', basic_controls, toggle_paused); br();
-  make_button('reinit flocks', basic_controls, init_node_flocks); br();
   const framerate_elt = createDiv().parent(basic_controls);
   setInterval(() => framerate_elt.html(`framerate ${frameRate().toFixed(1)}`), 1000);
+  make_button('reinit', basic_controls, init_node_flocks); br();
   NUM_FLOCKS_ELT = createSpan().parent(basic_controls);
   make_button('-', basic_controls, () => change_num_flocks(-1));
   make_button('+', basic_controls, () => change_num_flocks(+1));
@@ -540,52 +495,90 @@ function create_control_panel() {
   make_button('-', basic_controls, () => change_flock_size(-1));
   make_button('-', basic_controls, () => change_flock_size(+1));
   update_count_displays();
-  make_number_input('speed', 0.1, null, 1, 0.1, 32, basic_controls, x=>SPEED=x);
-  make_number_input('size', 0.1, null, 1, 0.1, 32, basic_controls, x=>ZOOM=x);
+  I_SPEED_MULT = new NumInput('speed', 0.1, null, 1, 0.1, 32, basic_controls);
+  I_ZOOM = new NumInput('size', 0.1, null, 1, 0.1, 32, basic_controls);
 
   // Debugging tools.
-  MOUSE_REPEL_CHECKBOX = make_checkbox('mouse repel', true, basic_controls, x=>MOUSE_REPEL=x);
-  make_checkbox('surround',    true, basic_controls, x=>SURROUND_OR_CLOSEST=x);
-  make_checkbox('links',      false, basic_controls, x=>DEBUG_NEIGHBORS=x);
-  make_checkbox('space need', false, basic_controls, x=>DEBUG_DISTANCE=x);
-  make_checkbox('forces',     false, basic_controls, x=>DEBUG_FORCE=x);
-  make_checkbox('quadtree',   false, basic_controls, x=>DEBUG_QUADTREE=x);
   // Purely visual options.
-  make_checkbox('circles',    false, basic_controls, x=>CIRCLES=x);
+  I_MOUSE_REPEL = new Checkbox('mouse repel', true, basic_controls);
+  I_CIRCLES = new Checkbox('circles',  false, basic_controls);
+  I_BACKGROUND = new Checkbox('background', true, basic_controls);
+  I_SURROUND_OR_CLOSEST = new Checkbox('better nbors',  true, basic_controls);
+  I_DEBUG_NEIGHBORS = new Checkbox('debug links', false, basic_controls);
+  I_DEBUG_DISTANCE = new Checkbox('debug space', false, basic_controls);
+  I_DEBUG_FORCE = new Checkbox('debug force',  false, basic_controls);
+  I_DEBUG_QUADTREE = new Checkbox('debug qtree', false, basic_controls);
 
   // Sliders for forces and such.
   const sliders = createDiv().id('sliders').parent(main);
 
-  make_slider('nf separation', 0, 10, 5, .05, sliders, x=>NF_SEPARATION_FORCE=x);
-  make_slider('separation',    0, 10, 2, .05, sliders, x=>SEPARATION_FORCE=x);
-  make_slider('cohesion',      0, 10, 1, .05, sliders, x=>COHESION_FORCE=x);
-  make_slider('alignment',     0, 10, 1, .05, sliders, x=>ALIGNMENT_FORCE=x);
+  make_button('reset', sliders, sliders_reset);
+  make_button('fish', sliders, sliders_fish);
+  make_button('bees', sliders, sliders_bees);
+  make_button('birds', sliders, sliders_birds);
+  I_NF_SEPARATION_FORCE = new Slider('nf separation', 0, 20, 10, .5, sliders);
+  I_SEPARATION_FORCE    = new Slider('separation',    0, 10, 2, .25, sliders);
+  I_COHESION_FORCE      = new Slider('cohesion',      0, 10, 1, .25, sliders);
+  I_ALIGNMENT_FORCE     = new Slider('alignment',     0, 10, 1, .25, sliders);
 
-  make_slider('max force',        0, 5, .6, .05, sliders, x=>MAX_FORCE=x);
-  make_slider('nat speed weight', 0, 1, .2, .05, sliders, x=>NATURAL_SPEED_WEIGHT=x);
+  I_MAX_FORCE            = new Slider('max force',        0, 5, .6,  .1, sliders);
+  I_NATURAL_SPEED_WEIGHT = new Slider('nat speed weight', 0, 1, .2, .02, sliders);
 
-  make_slider('space aware mult', 0, 10, 6, .5, sliders, x=>SPACE_AWARE_MULT=x);
-  make_slider('# segments (#nbrs)', 0, 30, 5, 1, sliders, x=>NUM_NEIGHBORS=x);
-  make_slider('#/seg (#nf nbrs)',   0, 30, 1, 1, sliders, x=>NF_NUM_NEIGHBORS=x);
-  make_slider('rand move freq', 0, 1, .1, .02, sliders, x=>RAND_MOVE_FREQ=x);
-  make_slider('rand move mult', 0, 1, .05, .01, sliders, x=>RAND_MOVE_MULT=x);
+  I_SPACE_AWARE_MULT = new Slider('space aware mult',   0, 15, 8, .5, sliders);
+  I_NUM_NEIGHBORS    = new Slider('# segments (#nbrs)', 0, 16, 5, 1, sliders);
+  I_NF_NUM_NEIGHBORS = new Slider('#/seg (#nf nbrs)',   0, 10, 1, 1, sliders);
+  I_RAND_MOVE_FREQ = new Slider('rand move freq', 0, 1,  0, .02, sliders);
+  I_RAND_MOVE_MULT = new Slider('rand move mult', 0, 1, .1, .02, sliders);
+  createA('https://github.com/jli/processing-sketches/tree/master/flock', 'src').parent(sliders);
 }
 
-// h/t https://developers.google.com/web/fundamentals/native-hardware/fullscreen/
-function fullscreen_junk() {
-  const doc = window.document;
-  const docEl = doc.documentElement;
-  const elt = doc.fullscreenElement || doc.mozFullScreenElement || doc.webkitFullscreenElement || doc.msFullscreenElement;
-  const request = docEl.requestFullscreen || docEl.mozRequestFullScreen || docEl.webkitRequestFullScreen || docEl.msRequestFullscreen;
-  const cancel = doc.exitFullscreen || doc.mozCancelFullScreen || doc.webkitExitFullscreen || doc.msExitFullscreen;
-  return [elt, request, cancel, doc, docEl];
+function sliders_reset() {
+  I_NF_SEPARATION_FORCE.reset();
+  I_SEPARATION_FORCE.reset();
+  I_COHESION_FORCE.reset();
+  I_ALIGNMENT_FORCE.reset();
+  I_MAX_FORCE.reset();
+  I_NATURAL_SPEED_WEIGHT.reset();
+  I_SPACE_AWARE_MULT.reset();
+  I_NUM_NEIGHBORS.reset();
+  I_NF_NUM_NEIGHBORS.reset();
+  I_RAND_MOVE_FREQ.reset();
+  I_RAND_MOVE_MULT.reset();
 }
-function fullscreen_supported() {
-  const [fs_elt, request_fs, cancel_fs] = fullscreen_junk();
-  return !(request_fs === undefined || cancel_fs === undefined);
+
+function sliders_fish() {
+  sliders_reset();
+  I_NF_SEPARATION_FORCE.set(20);
+  I_SEPARATION_FORCE.set(1);
+  I_COHESION_FORCE.set(5);
+  I_ALIGNMENT_FORCE.set(4);
+  I_MAX_FORCE.set(1);
+  I_NATURAL_SPEED_WEIGHT.set(0.2);
+  I_NUM_NEIGHBORS.set(8);
+  I_NF_NUM_NEIGHBORS.set(1);
 }
-function toggle_fullscreen() {
-  const [fs_elt, request_fs, cancel_fs, doc, docEl] = fullscreen_junk();
-  if (!fs_elt) { request_fs.call(docEl); }
-  else { cancel_fs.call(doc); }
+
+function sliders_birds() {
+  sliders_reset();
+  I_NF_SEPARATION_FORCE.set(20);
+  I_SEPARATION_FORCE.set(3);
+  I_COHESION_FORCE.set(1);
+  I_ALIGNMENT_FORCE.set(2);
+  I_MAX_FORCE.set(0.5);
+  I_NATURAL_SPEED_WEIGHT.set(0.3);
+  I_SPACE_AWARE_MULT.set(15);
+  I_NUM_NEIGHBORS.set(4);
+  I_NF_NUM_NEIGHBORS.set(1);
+}
+
+function sliders_bees() {
+  sliders_reset();
+  I_NF_SEPARATION_FORCE.set(20);
+  I_SEPARATION_FORCE.set(2.5);
+  I_COHESION_FORCE.set(5);
+  I_ALIGNMENT_FORCE.set(0.5);
+  I_MAX_FORCE.set(2);
+  I_NATURAL_SPEED_WEIGHT.set(0.1);
+  I_NUM_NEIGHBORS.set(8);
+  I_NF_NUM_NEIGHBORS.set(2);
 }
