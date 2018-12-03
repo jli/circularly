@@ -11,15 +11,15 @@
 
 let FLOCKS = [];
 
+const DEBUG_MODE = false;
 const MOBILE = /Mobi|Android/i.test(navigator.userAgent);
-const GROUP_SIZE_RANDBOUND = MOBILE ? [70, 150] : [100, 200];
-const NUM_GROUPS_RANDBOUND = MOBILE ? [2, 2] : [2, 3];
+const GROUP_SIZE_RANDBOUND = DEBUG_MODE?[5,5]: MOBILE ? [70, 150] : [100, 200];
+const NUM_GROUPS_RANDBOUND = DEBUG_MODE?[1,1]: MOBILE ? [2, 2] : [2, 3];
 const SPEED_RANDBOUND = [2, 5];
 const NODE_SIZE_RANDBOUND = MOBILE ? [4, 7] : [6, 12];
 
 // When increasing/decreasing flock sizes, change by this frac of existing size.
 const FLOCK_SIZE_CHANGE_FRAC = 0.1;
-const SPEED_LIMIT_MULT = 10;
 let SPEED_AVG_WEIGHT = 0.90;
 let SPEED_CUR_WEIGHT = 0.1;
 let TOUCH_RAD = 70;
@@ -43,6 +43,8 @@ let I_COHESION_FORCE;
 let I_ALIGNMENT_FORCE;
 let I_MAX_FORCE;
 let I_NATURAL_SPEED_WEIGHT;
+let I_LAZINESS;
+let I_SPEED_LIMIT;
 let I_SPACE_AWARE_MULT;
 let I_NUM_NEIGHBORS;
 let I_NF_NUM_NEIGHBORS;
@@ -75,7 +77,7 @@ function relspeed_color_shift(col, relspeed) {
   const hue_delta = constrain(map(relspeed, 0.5, 1.5, -50, 50), -100, 100);
   h = h + hue_delta % 360;
 
-  b = constrain(b * map2(relspeed, 0.5, 1.0, 1.2,  0.25, 1.0, 2.0), 10, 100);
+  b = constrain(b * map2(relspeed, 0.5, 1.0, 1.2,  0.25, 1.0, 2.0), 30, 100);
 
   return color(h, s, b);
 }
@@ -128,9 +130,8 @@ class Node {
     return new Node(this.id, this.flock_id, this.pos.copy(), this.vel.copy(),
                     this.space_need, this.col, this.size);
   }
-  get speed_limit() { return this.natural_speed * SPEED_LIMIT_MULT; }
   get zspace_need() { return this.space_need * I_ZOOM.value; }
-  get debugf() { return I_DEBUG_FORCE.value && this.id === 0; }
+  get debugf() { return DEBUG_MODE || (I_DEBUG_FORCE.value && this.id === 0); }
 
   draw_shape() {
     const siz = this.size * I_ZOOM.value;
@@ -161,12 +162,12 @@ class Node {
     }
   }
 
-  get_nearest_nodes(flocks, qt) {
+  get_nearest_nodes(qt) {
     // same flock and not-same flock
     const nodes_and_dists_sf = [];
     const nodes_and_dists_nf = [];
     const max_dist = I_SPACE_AWARE_MULT.value * this.zspace_need;
-    const near = qt.queryCenter(this.pos, max_dist, max_dist);
+    const near = qt.queryCenter(this.pos, max_dist * 2, max_dist * 2);
     for (const [other, _] of near) {
       const same_flock = this.flock_id === other.flock_id;
       if (same_flock && this.id === other.id) continue;
@@ -181,7 +182,7 @@ class Node {
     return nodes_and_dists_sf.concat(nodes_and_dists_nf);
   }
 
-  get_surrounding_nodes(flocks, qt) {
+  get_surrounding_nodes(qt) {
     // HACK: reusing existing sliders...
     const num_segments = I_NUM_NEIGHBORS.value;
     const num_per_segment = I_NF_NUM_NEIGHBORS.value;
@@ -194,7 +195,7 @@ class Node {
     // need react to this node before this node reacts to it. could add some
     // safety factor to account, maybe? bleh.
     const max_dist = I_SPACE_AWARE_MULT.value * this.zspace_need;
-    const near = qt.queryCenter(this.pos, max_dist, max_dist);
+    const near = qt.queryCenter(this.pos, max_dist * 2, max_dist * 2);
     for (const [other, _] of near) {
       if (this.flock_id === other.flock_id && this.id === other.id) continue;
       const dist = this.pos.dist(other.pos);
@@ -212,10 +213,10 @@ class Node {
     return nodes_and_dists;
   }
 
-  update(flocks, qt, mouse_pos) {
+  update(qt, mouse_pos) {
     const nearby_nodes = (I_SURROUND_OR_CLOSEST.value
-                          ? this.get_surrounding_nodes(flocks, qt)
-                          : this.get_nearest_nodes(flocks, qt));
+                          ? this.get_surrounding_nodes(qt)
+                          : this.get_nearest_nodes(qt));
 
     const curspeed = this.vel.mag();
     const max_space_awareness = I_SPACE_AWARE_MULT.value * this.zspace_need;
@@ -265,11 +266,11 @@ class Node {
       if (I_MOUSE_REPEL.value && dist_sq < sq(TOUCH_RAD)) {
         ++sep_n;
         sep_force.add(away.setMag(
-          50 * I_SEPARATION_FORCE.value * curspeed * TOUCH_RAD * this.zspace_need / dist_sq));
-      } else if (!I_MOUSE_REPEL.value) {
+          20 * I_SEPARATION_FORCE.value * curspeed * TOUCH_RAD * this.zspace_need / dist_sq));
+      } else if (!I_MOUSE_REPEL.value && dist_sq < sq(TOUCH_RAD*2)) {
         ++sep_n;
         sep_force.add(away.setMag(
-          -2 * I_COHESION_FORCE.value * curspeed * log(dist_sq) / this.zspace_need));
+          -20 * I_COHESION_FORCE.value * curspeed * log(dist_sq) / this.zspace_need));
       }
     }
 
@@ -277,20 +278,25 @@ class Node {
     if (sep_n) { tot_force.add(sep_force.div(sep_n)); }
     if (ali_n) { tot_force.add(ali_force.div(ali_n).sub(this.vel).mult(I_ALIGNMENT_FORCE.value)); }
     if (this.debugf) {
-      const dpos = createVector(this.pos.x - 10, this.pos.y + 10);
-      fill(0, 90, 90); draw_triangle(dpos, sep_force, sep_force.mag() * 10);
-      fill(120, 90, 90); draw_triangle(dpos, ali_force, ali_force.mag() * 10);
+      stroke(220,90,90);
+      const sp = createVector(this.pos.x - 30, this.pos.y + 15);
+      fill(0, 90, 90, .5); draw_triangle(sp, sep_force, min(50, sep_force.mag() * 10));
+      const ap = createVector(this.pos.x + 30, this.pos.y + 15);
+      fill(120, 90, 90, .5); draw_triangle(ap, ali_force, min(50, ali_force.mag() * 10));
+      const tp = createVector(this.pos.x, this.pos.y + 15);
+      fill(0, 0, 90, .5); draw_triangle(tp, tot_force, min(50, tot_force.mag() * 10));
     }
 
     this.vel.add(tot_force.limit(I_MAX_FORCE.value));
     if (random(1) < I_RAND_MOVE_FREQ.value) {
       this.vel.add(p5.Vector.random2D().mult(curspeed * I_RAND_MOVE_MULT.value));
     }
-    const nsw = I_NATURAL_SPEED_WEIGHT.value;
-    const mag = min(this.vel.mag() * (1-nsw) + this.natural_speed * nsw, this.speed_limit);
+    let mag = lerp(this.vel.mag(), this.natural_speed, I_NATURAL_SPEED_WEIGHT.value);
+    mag = lerp(mag, 0, I_LAZINESS.value);
+    mag = constrain(mag, 0.001, I_SPEED_LIMIT.value);
     this.vel.setMag(mag);
-    this.speed_cur = lerp(this.speed_cur, mag, 1-SPEED_CUR_WEIGHT);
-    this.speed_avg = lerp(this.speed_avg, mag, 1-SPEED_AVG_WEIGHT);
+    this.speed_cur = lerp(mag, this.speed_cur, SPEED_CUR_WEIGHT);
+    this.speed_avg = lerp(mag, this.speed_avg, SPEED_AVG_WEIGHT);
 
     this.pos.add(this.vel.copy().mult(I_SPEED_MULT.value));
     wrap_vector(this.pos);
@@ -324,13 +330,13 @@ function init_node_flocks() {
   update_count_displays();
 }
 
-function copy_flocks_build_quadtree(flocks) {
+function build_quadtree(flocks) {
   const qt = new Quadtree(createVector(0,0), width, height);
-  const flocks_copy = flocks.map(f => f.map(n => {
-    qt.insert(n, n.pos);
-    return n.copy();
+  flocks.forEach(f => f.forEach(n => {
+    const n2 = n.copy();
+    qt.insert(n2, n2.pos);
   }));
-  return [flocks_copy, qt];
+  return qt;
 }
 
 function setup() {
@@ -355,18 +361,18 @@ function draw() {
     mouse_pos.div(touches.length);
   }
 
-  const [tmp_flocks, qt] = copy_flocks_build_quadtree(FLOCKS);
+  const qt = build_quadtree(FLOCKS);
   for (const flock of FLOCKS) {
     for (const node of flock) {
       node.draw();
-      node.update(tmp_flocks, qt, mouse_pos);
+      node.update(qt, mouse_pos);
     }
   }
 
   if (mouse_pos) {
     strokeWeight(1); noFill(); let size;
     if (I_MOUSE_REPEL.value) { stroke(0, 100, 30); size = TOUCH_RAD*2; }
-    else { stroke(120, 100, 20); size = TOUCH_RAD/2; }
+    else { stroke(120, 100, 20); size = TOUCH_RAD*4; }
     ellipse(mouse_pos.x, mouse_pos.y, size, size);
   }
 
@@ -392,9 +398,9 @@ function windowResized() { resizeCanvas(windowWidth, windowHeight); }
 // Note: we need touchMoved() to return false in order for touch interactions to
 // work on mobile. However, this also disables the ability to use the sliders in
 // the control panel. Sooo, we toggle this value depending on whether the
-// control  panel is shown.
-let ALLOW_TOUCH_MOVED = false;
-function touchMoved() { return ALLOW_TOUCH_MOVED; }
+// control panel is shown.
+let CONTROL_PANEL_OPEN = false;
+function touchMoved() { return CONTROL_PANEL_OPEN; }
 
 function touchStarted() {
   switch (touches.length) {
@@ -450,53 +456,59 @@ function change_flock_size(dir) {
   update_count_displays();
 }
 
-let CONTROL_PANEL;
-let TOGGLE_CONTROL_PANEL_BUTTON;
-let NUM_FLOCKS_ELT, NUM_NODES_ELT, FRAMERATE_ELT;
+const CONTROL_PANEL_FULL_ID = 'controlPanelFull';
+const CONTROL_PANEL_MAIN_ID = 'controlPanelMain';
+const CONTROL_PANEL_BUTTON_ID = 'showControlPanelButton';
+const NUM_FLOCKS_SPAN_ID = 'statusNumFlocks';
+const NUM_NODES_SPAN_ID = 'statusNumNodes';
 
 function update_count_displays() {
-  NUM_FLOCKS_ELT.html(`flocks [${FLOCKS.length}] `);
-  NUM_NODES_ELT.html(`nodes [${FLOCKS.map(a=>a.length).reduce((a,b)=>a+b, 0)}] `);
+  select('#'+NUM_FLOCKS_SPAN_ID).html(`flocks [${FLOCKS.length}] `);
+  select('#'+NUM_NODES_SPAN_ID).html(`nodes [${FLOCKS.map(a=>a.length).reduce((a,b)=>a+b, 0)}] `);
 }
 
 function toggle_control_panel() {
-  if (CONTROL_PANEL.attribute('status') === 'hidden') {
-    CONTROL_PANEL.attribute('status', 'shown');
-    CONTROL_PANEL.style('translate', 0, 0);
-    TOGGLE_CONTROL_PANEL_BUTTON.html('hide');
-    ALLOW_TOUCH_MOVED = true;
+  const panel = select('#'+CONTROL_PANEL_FULL_ID);
+  const button = select('#'+CONTROL_PANEL_BUTTON_ID);
+  if (panel.attribute('status') === 'hidden') {
+    panel.attribute('status', 'shown');
+    panel.style('translate', 0, 0);
+    button.html('hide');
+    CONTROL_PANEL_OPEN = true;
   } else {
-    CONTROL_PANEL.attribute('status', 'hidden');
-    const ty = CONTROL_PANEL.size()['height'] + parseInt(CONTROL_PANEL.style('bottom'), 10);
-    CONTROL_PANEL.style('translate', 0, ty);
-    TOGGLE_CONTROL_PANEL_BUTTON.html('show');
-    ALLOW_TOUCH_MOVED = false;
+    panel.attribute('status', 'hidden');
+    // Move the full control panel down by the height of the main section. This
+    // leaves the toggle button exposed, but the main section hidden.
+    panel.style('translate', 0, panel.elt.querySelector('#'+CONTROL_PANEL_MAIN_ID).scrollHeight);
+    button.html('show');
+    CONTROL_PANEL_OPEN = false;
   }
 }
 
 function create_control_panel() {
-  CONTROL_PANEL = createDiv().id('controlPanelFull').attribute('status', 'shown');
-  TOGGLE_CONTROL_PANEL_BUTTON = make_button('hide', CONTROL_PANEL, toggle_control_panel).id('showControlPanelButton');
+  const panel_full = createDiv().id(CONTROL_PANEL_FULL_ID).attribute('status', 'shown');
+  const toggle_div = createDiv().parent(panel_full).id('showControlPanelButtonConainer');
+  make_button('hide', toggle_div, toggle_control_panel).id(CONTROL_PANEL_BUTTON_ID);
 
-  // Holds all the controls. Excludes the toggle button
-  const main = createDiv().id('controlPanelMain').parent(CONTROL_PANEL);
+  // Holds all the controls. Excludes the toggle button.
+  const panel_main = createDiv().id(CONTROL_PANEL_MAIN_ID).parent(panel_full);
 
   // Basic controls: pause, reinit, change speed, size, # flocks.
-  const basic_controls = createDiv().parent(main);
+  const basic_controls = createDiv().parent(panel_main);
   const br = () => createElement('br').parent(basic_controls);
   const framerate_elt = createDiv().parent(basic_controls);
   setInterval(() => framerate_elt.html(`framerate ${frameRate().toFixed(1)}`), 1000);
   make_button('reinit', basic_controls, init_node_flocks); br();
-  NUM_FLOCKS_ELT = createSpan().parent(basic_controls);
+  createSpan().parent(basic_controls).id(NUM_FLOCKS_SPAN_ID);
   make_button('-', basic_controls, () => change_num_flocks(-1));
   make_button('+', basic_controls, () => change_num_flocks(+1));
   br();
-  NUM_NODES_ELT = createSpan().parent(basic_controls);
+  createSpan().parent(basic_controls).id(NUM_NODES_SPAN_ID);
   make_button('-', basic_controls, () => change_flock_size(-1));
   make_button('-', basic_controls, () => change_flock_size(+1));
   update_count_displays();
-  I_SPEED_MULT = new NumInput('speed', 0.1, null, 1, 0.1, 32, basic_controls);
-  I_ZOOM = new NumInput('size', 0.1, null, 1, 0.1, 32, basic_controls);
+  I_SPEED_MULT = new NumInput('speed', 0.1, null, DEBUG_MODE?0.2: 1, 0.1, 32, basic_controls);
+  I_ZOOM = new NumInput('size', 0.1, null, DEBUG_MODE?3: 1, 0.1, 32, basic_controls);
 
   // Debugging tools.
   // Purely visual options.
@@ -504,13 +516,13 @@ function create_control_panel() {
   I_CIRCLES = new Checkbox('circles',  false, basic_controls);
   I_BACKGROUND = new Checkbox('background', true, basic_controls);
   I_SURROUND_OR_CLOSEST = new Checkbox('better nbors',  true, basic_controls);
-  I_DEBUG_NEIGHBORS = new Checkbox('debug links', false, basic_controls);
-  I_DEBUG_DISTANCE = new Checkbox('debug space', false, basic_controls);
-  I_DEBUG_FORCE = new Checkbox('debug force',  false, basic_controls);
+  I_DEBUG_NEIGHBORS = new Checkbox('debug links', DEBUG_MODE, basic_controls);
+  I_DEBUG_DISTANCE = new Checkbox('debug space', DEBUG_MODE, basic_controls);
+  I_DEBUG_FORCE = new Checkbox('debug force', DEBUG_MODE, basic_controls);
   I_DEBUG_QUADTREE = new Checkbox('debug qtree', false, basic_controls);
 
   // Sliders for forces and such.
-  const sliders = createDiv().id('sliders').parent(main);
+  const sliders = createDiv().id('sliders').parent(panel_main);
 
   make_button('reset', sliders, sliders_reset);
   make_button('fish', sliders, sliders_fish);
@@ -523,8 +535,10 @@ function create_control_panel() {
 
   I_MAX_FORCE            = new Slider('max force',        0, 5, .6,  .1, sliders);
   I_NATURAL_SPEED_WEIGHT = new Slider('nat speed weight', 0, 1, .2, .02, sliders);
+  I_LAZINESS             = new Slider('laziness',         0, 1,  0, .02, sliders);
+  I_SPEED_LIMIT          = new Slider('speed limit',      0, 50, 10, 2, sliders);
 
-  I_SPACE_AWARE_MULT = new Slider('space aware mult',   0, 15, 8, .5, sliders);
+  I_SPACE_AWARE_MULT = new Slider('space aware mult',   0, 15, 5, .5, sliders);
   I_NUM_NEIGHBORS    = new Slider('# segments (#nbrs)', 0, 16, 5, 1, sliders);
   I_NF_NUM_NEIGHBORS = new Slider('#/seg (#nf nbrs)',   0, 10, 1, 1, sliders);
   I_RAND_MOVE_FREQ = new Slider('rand move freq', 0, 1,  0, .02, sliders);
@@ -539,6 +553,8 @@ function sliders_reset() {
   I_ALIGNMENT_FORCE.reset();
   I_MAX_FORCE.reset();
   I_NATURAL_SPEED_WEIGHT.reset();
+  I_LAZINESS.reset();
+  I_SPEED_LIMIT.reset();
   I_SPACE_AWARE_MULT.reset();
   I_NUM_NEIGHBORS.reset();
   I_NF_NUM_NEIGHBORS.reset();
