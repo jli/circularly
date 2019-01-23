@@ -364,7 +364,8 @@ function setup() {
   frameRate(25);
   colorMode(HSB);
   createCanvas(windowWidth, windowHeight);
-  create_control_panel(); setTimeout(toggle_control_panel, 1000);
+  create_control_panel();
+  toggle_control_panel();
   init_node_flocks();
 }
 
@@ -433,6 +434,7 @@ function keyPressed() {
   switch (key) {
     case 'p': toggle_paused(); break;
     case 'r': init_node_flocks(); break;
+    case 'R': sliders_randomize(); break;
     case ';': toggle_control_panel(); break;
   }
 }
@@ -489,17 +491,20 @@ function update_count_displays() {
 
 function toggle_control_panel() {
   const panel = select('#'+CONTROL_PANEL_FULL_ID);
+  const panel_main = select('#'+CONTROL_PANEL_MAIN_ID);
   const button = select('#'+CONTROL_PANEL_BUTTON_ID);
   if (panel.attribute('status') === 'hidden') {
     panel.attribute('status', 'shown');
-    panel.style('translate', 0, 0);
+    panel_main.style('display', 'flex');
+    // panel.style('translate', 0, 0);
     button.html('hide');
     CONTROL_PANEL_OPEN = true;
   } else {
     panel.attribute('status', 'hidden');
     // Move the full control panel down by the height of the main section. This
     // leaves the toggle button exposed, but the main section hidden.
-    panel.style('translate', 0, panel.elt.querySelector('#'+CONTROL_PANEL_MAIN_ID).scrollHeight);
+    panel_main.style('display', 'none');
+    // panel.style('translate', 0, panel.elt.querySelector('#'+CONTROL_PANEL_MAIN_ID).scrollHeight);
     button.html('show');
     CONTROL_PANEL_OPEN = false;
   }
@@ -529,7 +534,7 @@ function create_control_panel() {
   update_count_displays();
   I_SPEED_MULT = new NumInput('speed', 0.1, null, DEBUG_MODE?0.2: 1, 0.1, 32, basic_controls);
   I_ZOOM = new NumInput('size', 0.1, null, DEBUG_MODE?3: 1, 0.1, 32, basic_controls);
-  I_TRAILS = new NumInput('trails', 0, null, 5, 2, 32, basic_controls);
+  I_TRAILS = new NumInput('trails', 0, null, 4, 2, 32, basic_controls);
 
   // Debugging tools.
   // Purely visual options.
@@ -546,6 +551,7 @@ function create_control_panel() {
   const sliders = createDiv().id('sliders').parent(panel_main);
 
   make_button('reset', sliders, sliders_reset);
+  make_button('random', sliders, sliders_randomize);
   make_button('fish', sliders, sliders_fish);
   make_button('bees', sliders, sliders_bees);
   make_button('birds', sliders, sliders_birds);
@@ -581,6 +587,22 @@ function sliders_reset() {
   I_NF_NUM_NEIGHBORS.reset();
   I_RAND_MOVE_FREQ.reset();
   I_RAND_MOVE_MULT.reset();
+}
+
+function sliders_randomize() {
+  I_NF_SEPARATION_FORCE.randomize();
+  I_SEPARATION_FORCE.randomize();
+  I_COHESION_FORCE.randomize();
+  I_ALIGNMENT_FORCE.randomize();
+  I_MAX_FORCE.randomize();
+  // I_NATURAL_SPEED_WEIGHT.randomize();
+  // I_LAZINESS.randomize();
+  I_SPEED_LIMIT.randomize();
+  // I_SPACE_AWARE_MULT.randomize();
+  // I_NUM_NEIGHBORS.randomize();
+  // I_NF_NUM_NEIGHBORS.randomize();
+  // I_RAND_MOVE_FREQ.randomize();
+  // I_RAND_MOVE_MULT.randomize();
 }
 
 function sliders_fish() {
