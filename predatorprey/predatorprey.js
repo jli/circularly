@@ -1,3 +1,6 @@
+// TODO:
+// - breeding as dependent on food, not time?
+
 let I_GRID_SIZE;
 // if these are falsey, rows/cols are determined based on window size.
 let I_GRID_ROWS;
@@ -8,11 +11,13 @@ let I_INIT_PREY_FRAC;
 let I_INIT_PREDATOR_FRAC;
 let I_WRAPAROUND;
 let I_DRAW_RECT;
+let I_FULLBLEED;
 
 let I_PREDATOR_BREED_CYCLE;
 let I_PREDATOR_FEED_CYCLE;
 let I_PREY_BREED_CYCLE;
 let I_PREY_BREED_REQ;
+let I_TOMB_CYCLE;
 
 // De-syncs the pulses a bit. Maybe should use a different randomization method.
 let I_PREDATOR_BREED_PROB;
@@ -20,10 +25,12 @@ let I_PREY_BREED_PROB;
 
 let I_PREY_MOVES;
 let I_PREY_BREED_ASEXUALLY;
+let I_BREED_OVER_PREY;
 
 const CELL_EMPTY = 0;
-const CELL_PREDATOR = 2;
 const CELL_PREY = 1;
+const CELL_PREDATOR = 2;
+const CELL_TOMB = 3;
 const NEIGHBOR_DIRS = [
   [-1, -1], [0, -1], [1, -1],
   [-1, 0], [0, 1],
@@ -90,6 +97,9 @@ class Cell {
     let col;
     switch (this.t) {
       case CELL_EMPTY: return;
+      case CELL_TOMB:
+        col = color(map(frameCount - this.birth, 0, I_TOMB_CYCLE.value, 20, 5));
+        break;
       case CELL_PREDATOR:
         // predators get darker the longer they don't eat
         const hunger = frameCount - this.last_feed;
@@ -105,8 +115,9 @@ class Cell {
     }
     fill(col);
     const grid = I_GRID_SIZE.value;
-    if (I_DRAW_RECT.value) rect(c * grid, r * grid, grid, grid);
-    else ellipse(c * grid + grid/2, r * grid + grid/2, grid, grid);
+    const width = I_FULLBLEED.value ? grid : grid - 1;
+    if (I_DRAW_RECT.value) rect(c * grid, r * grid, width, width);
+    else ellipse(c * grid + grid/2, r * grid + grid/2, grid*.75, grid*.75);
   }
 }
 
@@ -173,10 +184,18 @@ class World {
       switch (cell.t) {
         case CELL_PREDATOR: this.predator_action(r, c, cell, change_cb); break;
         case CELL_PREY: this.prey_action(r, c, cell, change_cb); break;
+        case CELL_TOMB: this.tomb_action(r, c, cell, change_cb); break;
       }
       cell.last_update = frameCount;
     });
     return changed[0];
+  }
+
+  tomb_action(r, c, tomb, changed_cb) {
+    if (frameCount - tomb.birth >= I_TOMB_CYCLE.value) {
+      this.grid[r][c] = new Cell(CELL_EMPTY);
+      changed_cb();
+    }
   }
 
   predator_action(r, c, pred, changed_cb) {
@@ -184,10 +203,10 @@ class World {
     if (prey_pos) {
       // move and eat prey
       this.grid[prey_pos[0]][prey_pos[1]] = pred;
-      this.grid[r][c] = new Cell(CELL_EMPTY);
+      this.grid[r][c] = new Cell((I_TOMB_CYCLE.value > 0) ? CELL_TOMB : CELL_EMPTY);
       pred.last_feed = frameCount;
       changed_cb();
-    } else if (frameCount - pred.last_feed > I_PREDATOR_FEED_CYCLE.value) {
+    } else if (frameCount - pred.last_feed >= I_PREDATOR_FEED_CYCLE.value) {
       // die
       this.grid[r][c] = new Cell(CELL_EMPTY);
       changed_cb();
@@ -201,11 +220,11 @@ class World {
         changed_cb();
       }
     }
-    if (frameCount - pred.last_breed > I_PREDATOR_BREED_CYCLE.value
+    if (frameCount - pred.last_breed >= I_PREDATOR_BREED_CYCLE.value
         && Math.random() < I_PREDATOR_BREED_PROB.value) {
       // Prefer to spawn into empty space, but spawn over a prey cell if necessary.
       let pos = this.find_cell(r, c, CELL_EMPTY);
-      if (!pos) { pos = this.find_cell(r, c, CELL_PREY); }
+      if (I_BREED_OVER_PREY.value && !pos) { pos = this.find_cell(r, c, CELL_PREY); }
       if (pos) {
         this.grid[pos[0]][pos[1]] = new Cell(CELL_PREDATOR);
         pred.last_breed = frameCount;
@@ -217,14 +236,14 @@ class World {
   prey_action(r, c, prey, changed_cb) {
     const prey_pos = this.find_cell(r, c, CELL_PREY);
     const empty_pos = this.find_cell(r, c, CELL_EMPTY);
-    if (frameCount - prey.last_breed > I_PREY_BREED_CYCLE.value && empty_pos
+    if (frameCount - prey.last_breed >= I_PREY_BREED_CYCLE.value && empty_pos
         && Math.random() < I_PREY_BREED_PROB.value
         && (prey_pos || I_PREY_BREED_ASEXUALLY.value)) {
       // breed
       this.grid[empty_pos[0]][empty_pos[1]] = new Cell(CELL_PREY);
       prey.last_breed = frameCount;
       changed_cb();
-    } else if (frameCount - prey.last_breed > I_PREY_BREED_REQ.value) {
+    } else if (frameCount - prey.last_breed >= I_PREY_BREED_REQ.value) {
       // die
       this.grid[r][c] = new Cell(CELL_EMPTY);
       changed_cb();
@@ -332,35 +351,49 @@ function create_control_panel() {
   const framerate_elt = createDiv().parent(basic_controls);
   setInterval(() => framerate_elt.html(`framerate ${frameRate().toFixed(1)}`), 1000);
   make_button('reinit', basic_controls, init_world); br();
-  I_RATE = new NumInput('frate', 1, 100, 40, 1, 32, basic_controls);
+  I_RATE = new NumInput('frate', 1, 100, 15, 1, 32, basic_controls);
   I_RATE.onchange((rate) => frameRate(rate));
-  I_GRID_SIZE = new NumInput('cell size', 1, 100, 16, 1, 32, basic_controls);
+  I_GRID_SIZE = new NumInput('cell size', 1, 100, 12, 1, 32, basic_controls);
   I_GRID_ROWS = new NumInput('rows', 0, null, 0, null, 32, basic_controls);
   I_GRID_COLS = new NumInput('cols', 0, null, 0, null, 32, basic_controls);
   I_GRID_SIZE.onchange(r => windowResized());
   I_GRID_ROWS.onchange(r => windowResized());
   I_GRID_COLS.onchange(r => windowResized());
   I_DRAW_RECT = new Checkbox('rect/circle', true, basic_controls);
-  I_WRAPAROUND = new Checkbox('wraparound', false, basic_controls);
+  I_FULLBLEED = new Checkbox('fullbleed', true, basic_controls);
+  I_WRAPAROUND = new Checkbox('wraparound', true, basic_controls);
   I_PREY_MOVES = new Checkbox('prey move', false, basic_controls);
   I_PREY_BREED_ASEXUALLY = new Checkbox('prey asex', true, basic_controls);
+  I_BREED_OVER_PREY = new Checkbox('pred agg breed', false, basic_controls);
 
   // Sliders for main parameters.
   const sliders = createDiv().id('sliders').parent(panel_main);
   make_button('reset', sliders, () => { for (const s of SLIDERS) s.reset(); });
+  make_button('neo', sliders, () => { neo_opts(); });
 
   createDiv('predator').parent(sliders);
   I_PREDATOR_BREED_CYCLE = new Slider('breed every', 1, 30, 7, 1, sliders);
-  I_PREDATOR_FEED_CYCLE = new Slider('feed every', 1, 30, 4, 1, sliders);
-  I_PREDATOR_BREED_PROB = new Slider('breed prob', 0, 1, 0.85, 0.05, sliders);
+  I_PREDATOR_FEED_CYCLE = new Slider('feed every', 1, 30, 3, 1, sliders);
+  I_PREDATOR_BREED_PROB = new Slider('breed prob', 0, 1, 0.75, 0.05, sliders);
   I_INIT_PREDATOR_FRAC = new Slider('init %', 0, 1, 0.1, 0.01, sliders);
   createSpan('prey').parent(sliders);
-  I_PREY_BREED_CYCLE = new Slider('breed every', 1, 30, 1, 1, sliders);
+  I_PREY_BREED_CYCLE = new Slider('breed every', 1, 30, 2, 1, sliders);
   I_PREY_BREED_REQ = new Slider('breed req', 1, 1000, 500, 1, sliders);
-  I_PREY_BREED_PROB = new Slider('breed prob', 0, 1, 0.80, 0.05, sliders);
+  I_PREY_BREED_PROB = new Slider('breed prob', 0, 1, 0.85, 0.05, sliders);
   I_INIT_PREY_FRAC = new Slider('init %', 0, 1, 0.2, 0.01, sliders);
+  I_TOMB_CYCLE = new Slider('tomb cycle', 0, 10, 1, 1, sliders);
+
   SLIDERS = [
     I_PREDATOR_BREED_CYCLE, I_PREDATOR_FEED_CYCLE, I_PREDATOR_BREED_PROB, I_INIT_PREDATOR_FRAC,
     I_PREY_BREED_CYCLE, I_PREY_BREED_REQ, I_PREY_BREED_PROB, I_INIT_PREY_FRAC
   ];
+}
+
+function neo_opts() {
+  I_GRID_COLS.set(16);
+  I_GRID_ROWS.set(16);
+  I_GRID_SIZE.set(30);
+  I_RATE.set(5);
+  windowResized();
+  frameRate(I_RATE.value);
 }
