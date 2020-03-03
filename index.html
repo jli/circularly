@@ -1,36 +1,66 @@
 <!DOCTYPE HTML5>
 <html>
   <head>
-    <title>_</title>
+    <title>⟳</title>
     <style>
-      p {
-      font-family: serif;
-      font-size: 8em;
-      line-height: 55%;
-      width: 5em;
-      margin: auto;
-      text-align: center;
-      }
-      p.links {
-        margin: 2em auto 2em auto;
-        line-height: 80%;
-        font-size: 2em;
-      }
       body {
-      background-image: url(b.jpg);
-      background-size: cover;
+        background-image: url(c_.jpg);
+        background-size: cover;
+        font-family: Roboto, sans-serif;
+      }
+      .what-wrapper { text-align: center; }
+      .what {
+        display: inline-block;
+        margin: 2em auto 1.5em auto;
+        padding: 0.3em;
+        text-align: center;
+        color: rgb(180,180,190);
+        text-shadow: 0 2px 3px rgba(0,0,0,.95);
+        font-size: 3.5em;
+        font-style: italic;
+        line-height: 80%;
+      }
+      .links-wrapper { text-align: center; }
+      .links {
+        text-shadow: 0 -2px 3px rgba(0,0,0,.95);
+        display: inline-block;
+        margin: 1em auto 1em auto;
+        font-size: 2em;
+        text-align: left;
+      }
+      .links a {
+        background-image: linear-gradient(0,rgb(180,180,190),rgb(180,180,190));
+        background-position: 0 1.02em;
+        background-repeat: repeat-x;
+        background-size: 10px 1px;
+      }
+      a:link { color: rgb(180,180,190); text-decoration: none; }
+      a:visited { color: rgb(180,180,190); }
+      a:hover {
+        color: rgb(200,200,230);
+        background-color: rgba(6,6,6, 0.2);
       }
     </style>
-  </head><body>
-    <p>what do you get out of nature?
-      <br>why do you paint this subject?
-      <br>what is life to you?</p>
+  </head>
+  <body>
 
-    <p class="links">
-      <a href="./flock/">flock</a>
-      <br><a href="./predatorprey/">predator/prey</a>
-      <br><a href="./noise0-boxflow/">noiseflow</a>
-      <br><a href="./curves1/">curve</a>
-      <br><a href="./wind/">wind</a>
-    </p>
-</body></html>
+    <div class="what-wrapper">
+      <div class="what">
+        what do you get out of nature? <br>
+        why do you paint this subject? <br>
+        what is life to you?
+      </div>
+    </div>
+
+    <div class="links-wrapper">
+      <div class="links">
+        <a href="./flock/">flock</a>
+        <br> &nbsp; <a href="./predatorprey/">predator/prey</a>
+        <br> &nbsp; &nbsp; <a href="./noise0-boxflow/">noiseflow</a>
+        <br> &nbsp; &nbsp; &nbsp; <a href="./curves1/">curve</a>
+        <br> &nbsp; &nbsp; &nbsp; &nbsp; <a href="./wind/">wind</a>
+      </div>
+    </div>
+
+  </body>
+</html>
