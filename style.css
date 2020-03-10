@@ -1,0 +1,43 @@
+body {
+  background-image: url(c_.jpg);
+  background-size: cover;
+  font-family: Roboto, sans-serif;
+  color: rgb(180,180,190);
+}
+
+.center-text {
+  text-align: center;
+}
+
+.what {
+  margin-top: 20vh;
+  margin-bottom: 20vh;
+
+  text-shadow: 0 2px 3px rgba(0,0,0,.95);
+  font-size: 3.5em;
+  font-style: italic;
+  line-height: 80%;
+}
+
+.links {
+  display: inline-block;  /* so it can be centered */
+  text-shadow: 0 -2px 3px rgba(0,0,0,.95);
+  font-size: 2em;
+  text-align: left;
+}
+
+a {  /* thin underline */
+  text-decoration: none;
+  background-image: linear-gradient(0,rgb(180,180,190),rgb(180,180,190));
+  background-position: 0 1.02em;
+  background-repeat: repeat-x;
+  background-size: 10px 1px;
+}
+a:link,
+a:visited {
+  color: inherit;
+}
+a:hover {
+  color: rgb(200,200,230);
+  background-color: rgba(6,6,6,0.2);
+}
