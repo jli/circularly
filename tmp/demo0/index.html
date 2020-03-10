@@ -1,0 +1,135 @@
+<html>
+<head>
+  <style>
+    /* div { border: 2px solid red; } */
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Helvetica', sans-serif;
+      margin: 0;
+    }
+    h1 { font-family: serif; font-weight: 200; font-size: 3em; }
+    .header {
+      margin-bottom: 1em;
+    }
+    .wrapper {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    .center-col {
+      margin: 1em 20% 0 20%;
+    }
+    .columns {
+      display: flex;
+    }
+    .columns > div { padding: 1em; }
+    #hackform {
+      border: 2px solid grey;
+      height: 100%;
+    }
+    #hackform > div {
+      padding: 1.5em;
+    }
+  </style>
+</head>
+<body>
+
+<div class="wrapper">
+
+  <div class="header center-col">
+    <h1>OCTOBER 2020 REGISTRATION</h1>
+    <div>
+      Please see below the form for details about registration tiers, terms and conditions, and CE credits, as well as links to our code of conduct and other policies.
+    </div>
+  </div>
+
+
+  <div id="hackform" class="center-col">
+    <div class="classes">
+      <h2>Classes</h2>
+      <button id="class_mdma">Introduction to MDMA Therapy | Thu Oct 8</button>
+      <br><button id="class_psilo">Introduction to Psilocybin Therapy | Thu Oct 8</button>
+    </div>
+
+    <div>
+      <h2>Main Conference</h2>
+      <h3>Standard tier</h3>
+      <p>Standard registrations are General Admission, first-come first-served for seating.</p>
+
+      <div class="columns">
+        <div>
+          <h4>Multi-day</h4>
+          <button id="standard_max">Thu+Fri+Reception+Sat+Sun+Mon</button>
+        </div>
+
+        <div>
+          <h4>Single day</h4>
+          <button id="standard_thu">Thu Economics Forum</button>
+          <br><button id="standard_fri">Fri Clinical Focus Day</button>
+        </div>
+
+      </div>
+
+      <h3>Patron tier</h3>
+      <p>Patron registrations include reserved seating with the best sightlines, and additional support from our guest relations team.</p>
+
+      <div class="columns">
+        <div>
+          <h4>Multi-day</h4>
+          <button id="patron_max">Thu+Fri+Reception+Sat+Sun+Mon</button>
+        </div>
+        <div>
+          <h4>Single day</h4>
+          <button id="patron_thu">Thu Economics Forum</button>
+          <br><button id="patron_fri">Fri Clinical Focus Day</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+<script>
+const class_mdma = '5e4aef4796986800424a6e6f';
+const class_psilo = '5e4aef4796986800424a6e6e';
+const patron_thu = '5e3e3417ae3a1d00423e4763';
+const patron_fri = '5e3e3417ae3a1d00423e4766';
+const patron_max = '5e3e3416ae3a1d00423e4753';
+const standard_thu = '5e3e3418ae3a1d00423e4781';
+const standard_fri = '5e3e3418ae3a1d00423e4784';
+const standard_max = '5e3e3417ae3a1d00423e4772';
+function construct_url(rate_id) {
+  return `https://www.universe.com/embed2/events/horizons-2020-perspectives-on-psychedelics-tickets-new-york-894SDV?state=%7B%22analytics%22%3A%7B%22host%22%3A%7B%22ref%22%3Anull%2C%22url%22%3A%22https%3A%2F%2Fhorizons.nyc%2Fregister%22%7D%2C%22google%22%3A%7B%22clientId%22%3A%221509470032.1583816338%22%7D%2C%22ref%22%3Anull%7D%2C%22accessKeys%22%3A%5B%5D%2C%22locale%22%3A%22en%22%2C%22currentEventId%22%3A%225e3e3416ae3a1d00423e474f%22%2C%22costItems%22%3A%5B%7B%22id%22%3Anull%2C%22amount%22%3Anull%2C%22claim_token%22%3Anull%2C%22host_fields%22%3A%7B%7D%2C%22rate_id%22%3A%22${rate_id}%22%2C%22cart_id%22%3A%226666%22%7D%5D%2C%22pwywAmounts%22%3A%7B%7D%2C%22targetId%22%3A%22horizons-2020-perspectives-on-psychedelics-tickets-new-york-894SDV%22%2C%22targetType%22%3A%22event%22%7D`;
+}
+function link_button(id_name, rate_id) {
+  console.log('link_button on ', id_name, rate_id);
+  const b = document.getElementById(id_name);
+  const i = document.createElement('iframe');
+  i.style.width = '100%';
+  i.style.height = '100%';
+  console.log('found id:', b);
+  b.onclick = () => {
+    console.log('clicked, loading iframe:', id_name, rate_id);
+    i.src = construct_url(rate_id);
+    // Replace all form contents with new iframe.
+    const h = document.querySelector('#hackform');
+    h.innerHTML = '';
+    h.classList.remove('center-col');  // full width
+    h.appendChild(i);
+    // document.querySelector('.header').style.display = 'none';
+  };
+}
+link_button('class_mdma', class_mdma);
+link_button('class_psilo', class_psilo);
+link_button('patron_thu', patron_thu);
+link_button('patron_fri', patron_fri);
+link_button('patron_max', patron_max);
+link_button('standard_thu', standard_thu);
+link_button('standard_fri', standard_fri);
+link_button('standard_max', standard_max);
+</script>
+
+
+</body>
+</html>
