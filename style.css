@@ -7,6 +7,9 @@ body {
   font-family: sans-serif;
   font-family: 'Open Sans';
   color: rgb(180,180,190);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .center-text {
@@ -14,23 +17,21 @@ body {
 }
 
 .what {
-  margin-top: 20vh;
-  margin-bottom: 20vh;
-
-  font-size: 6.8vw;
+  font-size: min(6.8vw, 12vh);
+  margin-bottom: 1em;
   text-shadow: 0 2px 3px rgba(0,0,0,.95);
   line-height: 90%;
 }
 @media screen and (max-width: 600px) {
   .what {
-    font-size: 6.2vw;
+    font-size: min(6.2vw, 10vh);
   }
 }
 
 .links {
   display: inline-block;  /* so it can be centered */
   text-shadow: 0 -2px 3px rgba(0,0,0,.95);
-  font-size: 4vw;
+  font-size: min(4vw, 7vh);
   text-align: left;
 }
 
