@@ -17,15 +17,20 @@ body {
   margin-top: 20vh;
   margin-bottom: 20vh;
 
+  font-size: 6.8vw;
   text-shadow: 0 2px 3px rgba(0,0,0,.95);
-  font-size: 3.5em;
   line-height: 90%;
+}
+@media screen and (max-width: 600px) {
+  .what {
+    font-size: 6.2vw;
+  }
 }
 
 .links {
   display: inline-block;  /* so it can be centered */
   text-shadow: 0 -2px 3px rgba(0,0,0,.95);
-  font-size: 2em;
+  font-size: 4vw;
   text-align: left;
 }
 
