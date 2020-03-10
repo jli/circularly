@@ -1,7 +1,11 @@
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap');
+
 body {
   background-image: url(c_.jpg);
   background-size: cover;
-  font-family: Roboto, sans-serif;
+  background-position: center center;
+  font-family: sans-serif;
+  font-family: 'Open Sans';
   color: rgb(180,180,190);
 }
 
@@ -15,8 +19,7 @@ body {
 
   text-shadow: 0 2px 3px rgba(0,0,0,.95);
   font-size: 3.5em;
-  font-style: italic;
-  line-height: 80%;
+  line-height: 90%;
 }
 
 .links {
@@ -29,7 +32,7 @@ body {
 a {  /* thin underline */
   text-decoration: none;
   background-image: linear-gradient(0,rgb(180,180,190),rgb(180,180,190));
-  background-position: 0 1.02em;
+  background-position: 0 1.1em;
   background-repeat: repeat-x;
   background-size: 10px 1px;
 }
