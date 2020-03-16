@@ -1,0 +1,220 @@
+<!-- basic form mdc select -->
+<html>
+<head>
+  <link rel="stylesheet" href="./style.css">
+  <script src="./hack2.js"></script>
+
+  <!-- universe $u provider -->
+  <script src="https://www.universe.com/embed2.js"></script>
+
+  <!-- Required styles for MDC Web -->
+  <link rel="stylesheet" href="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css">
+  <!-- Required MDC Web JavaScript library -->
+  <script src="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.js"></script>
+
+  <script>
+  function setup_option(key) {
+    const {name, price} = RATES.find(({default_access_key}) => key === default_access_key);
+    const short = name
+      .replace(/(Patron|Standard|Class) \| /, '')
+      .replace(/ \| Winter Tier/, '')
+      .replace(/ \| Reserved Seating/, '');
+    const div = document.getElementById(key);
+    div.innerHTML = `
+    <div class="mdc-form-field width100">
+      <div class="mdc-checkbox mdc-checkbox--touch">
+        <input type="checkbox"
+               class="mdc-checkbox__native-control"
+               id="${key}"
+               name="${key}"/>
+        <div class="mdc-checkbox__background">
+          <svg class="mdc-checkbox__checkmark"
+               viewBox="0 0 24 24">
+            <path class="mdc-checkbox__checkmark-path"
+                  fill="none"
+                  d="M1.73,12.91 8.1,19.28 22.79,4.59"/>
+          </svg>
+          <div class="mdc-checkbox__mixedmark"></div>
+        </div>
+        <div class="mdc-checkbox__ripple"></div>
+      </div>
+      <label for="${key}">
+        <div class="label-wrapper">
+          <div class="tier-name">${short}</div>
+          <div class="tier-price">$${price}</div>
+        </div>
+      </label>
+    </div>`;
+    // Clicking on label causes checkbox toggle.
+    document.querySelector(`label[for=${key}]`).onclick = (ev) => {
+      // console.log('label click', ev);
+      document.querySelector(`input#${key}`).click();
+    }
+  }
+
+  function do_submit(ev) {
+    ev.preventDefault();
+    console.log('submit...');
+    const keys = [];
+    for (const {default_access_key: key} of RATES) {
+      const input = document.querySelector(`input[name=${key}]`);
+      if (input.checked) {
+        keys.push(key);
+      }
+    }
+    console.log('submit:', keys);
+    $u.open('PHZ7GC', { accessKeys: keys });
+    return false;
+  }
+
+  function setup_form() {
+    for (const {default_access_key} of RATES) {
+      setup_option(default_access_key);
+    }
+    // const form = document.querySelector('form');
+    // form.onsubmit = do_submit;
+    document.querySelector('#register').onclick = do_submit;
+
+    // wire up mdc select.
+    const select = new mdc.select.MDCSelect(document.querySelector('.mdc-select'));
+    select.listen('MDCSelect:change', () => {
+      // alert(`Selected option at index ${select.selectedIndex} with value "${select.value}"`);
+      // todo: unselect?
+      let toshow, tohide;
+      switch (select.value) {
+        case 'standard':
+          toshow = 'standard';
+          tohide = 'patron';
+          break;
+        case 'patron':
+          toshow = 'patron';
+          tohide = 'standard';
+          break;
+        default: console.error('select unknown:', select.value);
+      }
+      document.querySelector(`.tier-wrapper--${toshow}`).classList.remove('tier-wrapper--hidden');
+      document.querySelector(`.tier-wrapper--${tohide}`).classList.add('tier-wrapper--hidden');
+    });
+  }
+
+  window.onload = setup_form;
+  </script>
+
+</head>
+<body>
+
+  <div class="wrapper">
+
+    <div class="header center-col">
+      <div>
+        <img class="header-img" src="https://images.squarespace-cdn.com/content/v1/5792419c9f74561cfb35934d/1581987868634-2SRTJ2F2YCPKC2J6TM7K/ke17ZwdGBToddI8pDm48kO7Rg1Gpu728H4UqxUIfecJZw-zPPgdn4jUwVcJE1ZvWQUxwkmyExglNqGp0IvTJZamWLI2zvYWH8K3-s_4yszcp2ryTI0HqTOaaUohrI8PICj5SdZHY9KUswDgTH3eH8sP5PrkY15Dr7CE2CPSRiTEKMshLAGzx4R3EDFOm1kBS/Horizons_Sunday_CreditMe_%40Soulfocus_Media-6+smaller.jpg?format=1000w">
+        <h1>OCTOBER 2020 REGISTRATION</h1>
+        <p>
+        Please see below the form for details about registration tiers,
+        terms and conditions, and CE credits, as well as links to our code of
+        conduct and other policies.
+        </p>
+      </div>
+    </div>
+
+
+    <div id="hackform" class="center-col">
+      <form>
+        <div class="classes">
+          <h2>Classes</h2>
+          <p>Classes are a full day of detailed study of a topic with expert
+            researchers and practitioners.
+          </p>
+          <div id="C_MDMA"></div>
+          <div id="C_PSILO"></div>
+        </div>
+
+        <div class="main-conference">
+          <h2>Main Conference</h2>
+
+          <p>Standard registrations are General Admission, first-come
+             first-served for seating.
+             Standard registrations accurately reflect the price of sustainably
+             producing the conference from year to year.
+          </p>
+          <p>Patron registrations include reserved seating with the best
+            sightlines, and additional support from our guest relations team.
+            Patrons have help support the expansion of our programs, as well as
+            helping to subsidize the cost of student discount registrations.
+          </p>
+
+          <!-- TODO: why doesn't this show only selected item by default? -->
+          <div class="mdc-select">
+            <div class="mdc-select__anchor tier-width-class">
+              <i class="mdc-select__dropdown-icon"></i>
+              <div class="mdc-select__selected-text"></div>
+              <span class="mdc-floating-label">Pick a registration tier</span>
+              <div class="mdc-line-ripple"></div>
+            </div>
+            <div class="mdc-select__menu mdc-menu mdc-menu-surface tier-width-class">
+              <ul class="mdc-list">
+                <li class="mdc-list-item" data-value="standard" aria-selected>
+                  Standard
+                </li>
+                <li class="mdc-list-item" data-value="patron">
+                  Patron
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="tier-wrapper--standard tier-wrapper--hidden">
+            <div class="columns">
+              <div>
+                <h3>Single day</h3>
+                <div id="S_THU"></div>
+                <div id="S_FRI"></div>
+                <div id="S_SAT"></div>
+                <div id="S_SUN"></div>
+                <div id="S_MON"></div>
+              </div>
+              <div>
+                <h3>Multi-day</h3>
+                <div id="S_THU_MON"></div>
+                <div id="S_FRI_SUN"></div>
+                <div id="S_REC_SUN"></div>
+                <div id="S_SAT_SUN"></div>
+                <div id="S_SAT_MON"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tier-wrapper--patron tier-wrapper--hidden">
+            <div class="columns">
+              <div>
+                <h3>Single day</h3>
+                <div id="P_THU"></div>
+                <div id="P_FRI"></div>
+                <div id="P_SAT"></div>
+                <div id="P_SUN"></div>
+                <div id="P_MON"></div>
+              </div>
+              <div>
+                <h3>Multi-day</h3>
+                <div id="P_THU_MON"></div>
+                <div id="P_FRI_SUN"></div>
+                <div id="P_REC_SUN"></div>
+                <div id="P_SAT_SUN"></div>
+                <div id="P_SAT_MON"></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- <button>Register</button> -->
+        <div class="center">
+          <button id="register">Register</button>
+        </div>
+      </form>
+    </div>
+
+  <!-- end wrapper -->
+  </div>
+</body>
+</html>
