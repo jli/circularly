@@ -1,0 +1,197 @@
+<!-- grid format. state keeps track of different quantities. -->
+
+<html>
+<head>
+  <link rel="stylesheet" href="./style.css">
+  <script src="./hack2.js"></script>
+  <!-- universe $u provider -->
+  <!-- <script src="https://www.universe.com/embed2.js"></script> -->
+  <script>
+  function setup_quantities() {
+    console.log('setting up quantity selects...');
+    for (const container of document.querySelectorAll('.quantity-container')) {
+      const select = document.createElement('select');
+      for (let i = 0; i < 20; ++i) {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.innerText = i;
+        select.appendChild(opt);
+      }
+      container.appendChild(select);
+    }
+  }
+
+  function setup_quantityincrement() {
+    for (const select of document.querySelectorAll('select.tier')) {
+      select.onchange = (event) => {
+        if (event.target.value) {
+          const qtySelect = getTierSelectCorrespondingQuantity(select);
+          if (!qtySelect.selectedIndex) {
+            console.log('auto-setting quantity to 1 on tier', select, qtySelect);
+            qtySelect.selectedIndex = 1;  // set to 1 if currently 0
+          }
+        }
+      }
+    }
+  }
+
+  function setup_altrows() {
+    let even = true;
+    let item = 0;
+    for (const elt of document.querySelector('.formgrid').children) {
+      if (elt.classList.contains('header')) { continue; }
+      elt.classList.add(even ? 'even-row' : 'odd-row');
+      item += 1;
+      if (item === 4) {
+        even = !even;
+        item = 0;
+      }
+    }
+  }
+
+  function setup_register() {
+    document.querySelector('.submit-btn').onclick = submit;
+  }
+
+  function setup() {
+    setup_quantities();
+    setup_quantityincrement();
+    setup_altrows();
+    setup_register();
+  }
+
+  function getSelected(select) {
+    // assumes index 0 is not-chosen.
+    if (select.selectedIndex) {
+      return select.options[select.selectedIndex].value;
+    }
+    return null;
+  }
+
+  function getTierSelectCorrespondingQuantity(tierSelect) {
+    return tierSelect.parentElement.nextElementSibling.children[0];
+    return q;
+  }
+
+  function submit() {
+    const ticketCounts = {};
+    for (const select of document.querySelectorAll('select.tier')) {
+      const code = getSelected(select);
+      if (!code) continue;
+      const qtySelect = getTierSelectCorrespondingQuantity(select);
+      const q = Number(getSelected(qtySelect));
+      if (!q) { console.error('selected tier with 0 quantity:', code, q); }
+      else {
+        ticketCounts[code] = q;
+      }
+    }
+    console.log(ticketCounts);
+    const i = document.createElement('iframe');
+    i.classList.add('fullscreen');
+    // i.id = 'universe-8d1b1842-0b81-490f-a3ea-5c9ed094aaa8';
+    i.src = construct_url(ticketCounts);
+    const h = document.querySelector('#hackform');
+    h.appendChild(i);
+  }
+  window.onload = setup;
+  </script>
+</head>
+<body>
+
+    <div class="wrapper">
+
+      <div class="center-col">
+        <div>
+          <img class="header-img" src="https://images.squarespace-cdn.com/content/v1/5792419c9f74561cfb35934d/1581987868634-2SRTJ2F2YCPKC2J6TM7K/ke17ZwdGBToddI8pDm48kO7Rg1Gpu728H4UqxUIfecJZw-zPPgdn4jUwVcJE1ZvWQUxwkmyExglNqGp0IvTJZamWLI2zvYWH8K3-s_4yszcp2ryTI0HqTOaaUohrI8PICj5SdZHY9KUswDgTH3eH8sP5PrkY15Dr7CE2CPSRiTEKMshLAGzx4R3EDFOm1kBS/Horizons_Sunday_CreditMe_%40Soulfocus_Media-6+smaller.jpg?format=1000w">
+          <h1>OCTOBER 2020 REGISTRATION</h1>
+          <p>
+          Please see below the form for details about registration tiers,
+          terms and conditions, and CE credits, as well as links to our code of
+          conduct and other policies.
+          </p>
+        </div>
+      </div>
+
+      <div id="hackform" class="center-col">
+        <div class="formgrid">
+          <div class="header">Date</div>
+          <div class="header">Program</div>
+          <div class="header">Tier</div>
+          <div class="header">Quantity</div>
+
+          <div>Thu Oct 8</div>
+          <div>Classes</div>
+          <div>
+            <select class="tier" name="thu-classes" id="thu-classes-select">
+              <option value=""></option>
+              <option value="C_PSILO">Introduction to Psilocybin Therapy</option>
+              <option value="C_MDMA">Introduction to MDMA Therapy</option>
+            </select>
+          </div>
+          <div class="quantity-container"></div>
+
+          <div>Thu Oct 8</div>
+          <div>Psychedelic Economic Forum</div>
+          <div>
+            <select class="tier" name="thu-econ-tier" id="thu-econ-tier-select">
+              <option value=""></option>
+              <option value="S_THU">Standard</option>
+              <option value="P_THU">Patron</option>
+            </select>
+          </div>
+          <div class="quantity-container"></div>
+
+          <div>Fri Oct 9</div>
+          <div>Focus on Clinical Research</div>
+          <div>
+            <select class="tier" name="fri" id="fri-select">
+              <option value=""></option>
+              <option value="S_FRI">Standard</option>
+              <option value="P_FRI">Patron</option>
+            </select>
+          </div>
+          <div class="quantity-container"></div>
+
+          <div>Sat Oct 10</div>
+          <div>Science + Medicine</div>
+          <div>
+            <select class="tier" name="sat" id="sat-select">
+              <option value=""></option>
+              <option value="S_SAT">Standard</option>
+              <option value="P_SAT">Patron</option>
+            </select>
+          </div>
+          <div class="quantity-container"></div>
+
+          <div>Sun Oct 11</div>
+          <div>Society + Culture</div>
+          <div>
+            <select class="tier" name="sun" id="sun-select">
+              <option value=""></option>
+              <option value="S_SUN">Standard</option>
+              <option value="P_SUN">Patron</option>
+            </select>
+          </div>
+          <div class="quantity-container"></div>
+
+          <div>Mon Oct 12</div>
+          <div>Indigenous Communities Forum</div>
+          <div>
+            <select class="tier" name="won" id="won-select">
+              <option value=""></option>
+              <option value="S_MON">Standard</option>
+              <option value="P_MON">Patron</option>
+            </select>
+          </div>
+          <div class="quantity-container"></div>
+
+          <div class="submit-btn-row">
+            <button class="submit-btn">Register</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+</body>
+</html>
