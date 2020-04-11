@@ -2,7 +2,7 @@
 layout: post
 title:  "virus diaries: all bits rot"
 date:   2020-04-10 23:59:59 -0400
-categories: software anxiety covid19
+tags:   software anxiety covid19
 ---
 
 The governor of New Jersey [put out a call for COBOL programmers][nymag] to help fix their 40+ year-old unemployment system. This affirms a long-standing anxiety I've had about software systems.
