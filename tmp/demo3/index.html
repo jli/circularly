@@ -1,0 +1,157 @@
+<html>
+<head>
+  <link rel="stylesheet" href="./formstyle.css">
+  <script src="./universe_hack.js"></script>
+  <script>
+  let selectedTier = '';
+
+  function changeTier(tier) {
+    selectedTier = tier;
+    for (const t of TICKET_TIERS) {
+      const button = document.querySelector('#btn-' + t);
+      if (t === tier) {
+        button.classList.add('tier-selected');
+      } else {
+        button.classList.remove('tier-selected');
+      }
+    }
+    populatePrices(tier);
+    setTotalPrice();
+  }
+
+  function populatePrices(tier) {
+    for (const ticketType of TICKET_TYPES) {
+      const typeId = ticketType['type_id'];
+      const priceDiv = document.querySelector('#'+ typeId + '-price');
+      priceDiv.innerHTML = '$' + price(typeId, tier);
+    }
+  }
+
+  function globalChangeQuantity(value) {
+    for (const input of document.querySelectorAll('.input-quantity')) {
+      input.value = value;
+    }
+    setTotalPrice();
+  }
+
+  function changeQuantity() {
+    document.querySelector('#input-global-quantity').value = '';
+    validate();
+    setTotalPrice();
+  }
+
+  function setTotalPrice() {
+    let total = 0;
+    for (const ticketType of TICKET_TYPES) {
+      const typeId = ticketType['type_id'];
+      const n = document.querySelector('#'+ typeId + '-quantity').value;
+      total += n * price(typeId, selectedTier);
+    }
+    document.querySelector('#total-price').innerHTML = '$' + total + ' before fees';
+  }
+
+  function validate() {
+    const recQuantity = document.querySelector('#rec-quantity').value;
+    const satQuantity = document.querySelector('#sci-quantity').value;
+    const sunQuantity = document.querySelector('#soc-quantity').value;
+    if (recQuantity && (recQuantity > satQuantity || recQuantity > sunQuantity)) {
+      document.querySelector('#form-error').innerHTML = 'Reception tickets are only available if Saturday and Sunday tickets are also purchased.';
+      document.querySelector('#form-error').classList.add('shown');
+      document.querySelector('#rec-quantity').parentElement.classList.add('rec-error');
+      document.querySelector('.submit-btn').disabled = true;
+
+    } else {
+      document.querySelector('#form-error').innerHTML = '';
+      document.querySelector('#form-error').classList.remove('shown');
+      document.querySelector('#rec-quantity').parentElement.classList.remove('rec-error');
+      document.querySelector('.submit-btn').disabled = false;
+    }
+  }
+
+  function submit() {
+    const ticketCounts = {};
+    for (const ticketType of TICKET_TYPES) {
+      const typeId = ticketType['type_id'];
+      const n = document.querySelector('#'+ typeId + '-quantity').value;
+      ticketCounts[horizonsTicketId(typeId, selectedTier)] = n;
+    }
+    console.log('tickcounts', ticketCounts);
+    const i = document.createElement('iframe');
+    i.classList.add('fullscreen');
+    i.src = construct_url(ticketCounts);
+    const h = document.querySelector('#hackform');
+    h.appendChild(i);
+  }
+
+  function setup() {
+    changeTier('Standard');
+  }
+  window.onload = setup;
+  </script>
+</head>
+<body>
+
+    <div class="wrapper">
+
+      <div id="hackform" class="center-col">
+        <div class="tier-selector">
+          <button class="tier-btn" id="btn-Standard" onclick="changeTier('Standard')">Standard (live+virtual)</button>
+          <button class="tier-btn" id="btn-Patron" onclick="changeTier('Patron')">Patron (live+virtual)</button>
+          <button class="tier-btn" id="btn-Virtual" onclick="changeTier('Virtual')">Virtual only</button>
+          <span id="global-quantity-ctn">
+            Quantity:
+            <input id="input-global-quantity" type="number" min="0" max="100" value="0" onchange="globalChangeQuantity(this.value)"></input>
+          </span>
+        </div>
+        <div class="formgrid">
+          <!-- <div class="header">Date</div>
+          <div class="header">Program</div>
+          <div class="header">Price (each)</div>
+          <div class="header">Quantity</div> -->
+
+          <div>Thu Oct 8</div>
+          <div>Psychedelic Economic Forum</div>
+          <div id="econ-price"></div>
+          <div class="quantity-container"><input id="econ-quantity" class="input-quantity" type="number" min="0" max="100" value="0" onchange="changeQuantity()"></input> </div>
+
+          <div>Fri Oct 9</div>
+          <div>Focus on Clinical Research</div>
+          <div id="clin-price"></div>
+          <div class="quantity-container"><input id="clin-quantity" class="input-quantity" type="number" min="0" max="100" value="0" onchange="changeQuantity()"></input> </div>
+
+          <div>Fri Oct 9</div>
+          <div>Reception Party</div>
+          <div id="rec-price"></div>
+          <div class="quantity-container"><input id="rec-quantity" class="input-quantity" type="number" min="0" max="100" value="0" onchange="changeQuantity()"></input> </div>
+
+          <div>Sat Oct 10</div>
+          <div>Science + Medicine</div>
+          <div id="sci-price"></div>
+          <div class="quantity-container"><input id="sci-quantity" class="input-quantity" type="number" min="0" max="100" value="0" onchange="changeQuantity()"></input> </div>
+
+          <div>Sun Oct 11</div>
+          <div>Society + Culture</div>
+          <div id="soc-price"></div>
+          <div class="quantity-container"><input id="soc-quantity" class="input-quantity" type="number" min="0" max="100" value="0" onchange="changeQuantity()"></input> </div>
+
+          <div>Mon Oct 12</div>
+          <div>Indigenous Communities Forum</div>
+          <div id="ind-price"></div>
+          <div class="quantity-container"><input id="ind-quantity" class="input-quantity" type="number" min="0" max="100" value="0" onchange="changeQuantity()"></input> </div>
+
+          <div id="form-error" class="full-row">
+          </div>
+
+          <div id="total-price" class="full-row">
+          </div>
+
+          <div class="full-row">
+            <button class="submit-btn" onclick="submit()">Register</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+</body>
+</html>
