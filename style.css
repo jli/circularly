@@ -25,6 +25,10 @@ h2:before {
   color: rgb(26,26,26, 0.3);
 }
 
+h2 {
+  margin-top: 3rem;
+}
+
 a {  /* thin underline */
   text-decoration: none;
   background-image: linear-gradient(0,rgb(180,180,190),rgb(180,180,190));
