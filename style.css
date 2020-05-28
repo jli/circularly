@@ -4,7 +4,7 @@ body {
   font-family: 'Fira Code', monospace;
   color: rgb(26,26,26);
   background-color: rgb(226,226,226);
-  font-size: large;
+  font-size: 3vmin;
 }
 
 .body-wrapper {
@@ -29,18 +29,15 @@ h2 {
   margin-top: 3rem;
 }
 
-a {  /* thin underline */
-  text-decoration: none;
-  background-image: linear-gradient(0,rgb(180,180,190),rgb(180,180,190));
-  background-position: 0 1.1em;
-  background-repeat: repeat-x;
-  background-size: 10px 1px;
+a {
+  text-decoration-color: rgb(166,166,166);
 }
 a:link,
 a:visited {
   color: inherit;
 }
 a:hover {
+  text-decoration: none;
   color: rgb(266,266,266);
-  background-color: rgba(26,26,26);
+  background-color: rgba(86,86,86);
 }
