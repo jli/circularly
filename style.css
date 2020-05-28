@@ -1,37 +1,28 @@
-@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400&display=swap');
 
 body {
-  background-image: url(c_.jpg);
-  background-size: cover;
-  background-position: center center;
-  font-family: sans-serif;
-  font-family: 'Open Sans';
-  color: rgb(180,180,190);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+  font-family: 'Fira Code', monospace;
+  color: rgb(26,26,26);
+  background-color: rgb(226,226,226);
+  font-size: large;
 }
 
-.center-text {
-  text-align: center;
+.body-wrapper {
+  margin: 1rem;
 }
 
-.what {
-  font-size: min(6.8vw, 12vh);
-  margin-bottom: 1em;
-  text-shadow: 0 2px 3px rgba(0,0,0,.95);
-  line-height: 90%;
-}
-@media screen and (max-width: 600px) {
-  .what {
-    font-size: min(6.2vw, 10vh);
-  }
+.deemph2 {
+  color: rgb(26,26,26, 0.5);
 }
 
-.links {
-  display: inline-block;  /* so it can be centered */
-  text-shadow: 0 -2px 3px rgba(0,0,0,.95);
-  font-size: min(4vw, 7vh);
+h1:before {
+  content: "# ";
+  color: rgb(26,26,26, 0.3);
+}
+
+h2:before {
+  content: "## ";
+  color: rgb(26,26,26, 0.3);
 }
 
 a {  /* thin underline */
@@ -46,6 +37,6 @@ a:visited {
   color: inherit;
 }
 a:hover {
-  color: rgb(200,200,230);
-  background-color: rgba(6,6,6,0.2);
+  color: rgb(266,266,266);
+  background-color: rgba(26,26,26);
 }
