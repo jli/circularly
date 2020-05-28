@@ -4,12 +4,13 @@ body {
   font-family: 'Fira Code', monospace;
   color: rgb(26,26,26);
   background-color: rgb(226,226,226);
-  font-size: 3vmin;
+  font-size: 1.5rem;
 }
 
-@media screen and (max-width: 600px) {
+/* mobile */
+@media screen and (orientation: portrait) and (min-width: 600px) {
   body {
-    font-size: 1.0rem;
+    font-size: 1.9rem;
   }
 }
 
