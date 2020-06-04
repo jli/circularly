@@ -17,7 +17,7 @@ body {
     font-size: 1.5rem;
   }
   .body-wrapper {
-    max-width: 600px;
+    max-width: 400px;
     margin: 0 auto;
   }
 }
