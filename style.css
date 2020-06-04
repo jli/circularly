@@ -4,18 +4,22 @@ body {
   font-family: 'Fira Code', monospace;
   color: rgb(26,26,26);
   background-color: rgb(226,226,226);
-  font-size: 1.5rem;
-}
-
-/* mobile */
-@media screen and (orientation: portrait) and (min-width: 600px) {
-  body {
-    font-size: 1.9rem;
-  }
+  font-size: 1.7rem;
 }
 
 .body-wrapper {
-  margin: 1rem;
+  margin: 1.3rem;
+}
+
+/* desktop */
+@media screen and (min-width: 600px) {
+  body {
+    font-size: 1.5rem;
+  }
+  .body-wrapper {
+    max-width: 600px;
+    margin: 0 auto;
+  }
 }
 
 .deemph2 {
