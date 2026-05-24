@@ -1,15 +1,13 @@
 const RENDERER_KEY = 'avatar-eve:renderer-v1';
-const rendererName = localStorage.getItem(RENDERER_KEY) || 'geometric';
 const STORE_KEY    = 'avatar-eve:collection-v1';
 const PENDING_KEY  = 'avatar-eve:pending-avatar';
 
 const RENDERERS = [
-  'geometric','bigSmile','micah','avataaars','lorelei','funEmoji','notionists',
+  'bigSmile','micah','avataaars','lorelei','funEmoji','notionists',
   'pixelArt','adventurer','bigEars','croodles','openPeeps','bottts','personas',
   'toonHead','dylan','miniavs',
 ];
 const RENDERER_FILES = {
-  geometric:  './parts-geometric.js',
   bigSmile:   './parts-big-smile.js',
   micah:      './parts-micah.js',
   avataaars:  './parts-avataaars.js',
@@ -28,7 +26,6 @@ const RENDERER_FILES = {
   miniavs:    './parts-miniavs.js',
 };
 const RENDERER_LABELS = {
-  geometric:  'geometric',
   bigSmile:   'big smile',
   micah:      'micah',
   avataaars:  'avataaars',
@@ -47,7 +44,10 @@ const RENDERER_LABELS = {
   miniavs:    'miniavs',
 };
 
-const currentMod = await import(RENDERER_FILES[rendererName] || RENDERER_FILES.geometric);
+const _saved = localStorage.getItem(RENDERER_KEY) || 'bigSmile';
+const rendererName = RENDERER_FILES[_saved] ? _saved : 'bigSmile';
+
+const currentMod = await import(RENDERER_FILES[rendererName]);
 const {
   PARTS, SKIN_TONES, CATEGORY_ORDER, DEFAULT_AVATAR, STYLES,
   renderAvatarFull, renderPartPreview,
