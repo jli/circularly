@@ -3,9 +3,9 @@ const STORE_KEY    = 'avatar-eve:collection-v1';
 const PENDING_KEY  = 'avatar-eve:pending-avatar';
 
 const RENDERERS = [
-  'bigSmile','micah','avataaars','lorelei','funEmoji','notionists',
-  'pixelArt','adventurer','bigEars','croodles','openPeeps','bottts','personas',
-  'toonHead','dylan','miniavs',
+  'adventurer','avataaars','bigEars','bigSmile','bottts',
+  'croodles','dylan','funEmoji','lorelei','micah',
+  'miniavs','notionists','openPeeps','personas','pixelArt','toonHead',
 ];
 const RENDERER_FILES = {
   bigSmile:   './parts-big-smile.js',
@@ -144,7 +144,7 @@ function renderCollection() {
     return `
       <div class="collection-item${state.current && state.current.id === a.id ? ' active' : ''}${isCross ? ' cross-renderer' : ''}" data-id="${a.id}">
         <div class="coll-thumb" id="ct-${a.id}">${thumb}</div>
-        ${isCross ? `<div class="renderer-badge">${RENDERER_LABELS[r] || r}</div>` : ''}
+
         <div class="name">${escapeHtml(a.name || 'unnamed')}</div>
         <button class="delete" data-delete="${a.id}" title="delete">✕</button>
       </div>`;
