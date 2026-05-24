@@ -1,0 +1,293 @@
+:root {
+  --bg: #fdf6e3;
+  --panel: #ffffff;
+  --ink: #2d2333;
+  --accent: #ff6f91;
+  --accent-2: #845ec2;
+  --soft: #f1e8d8;
+  --border: #2d2333;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0; height: 100%;
+  font-family: ui-rounded, "SF Pro Rounded", system-ui, sans-serif;
+  font-size: 17px;
+  background: var(--bg); color: var(--ink);
+}
+
+.app {
+  display: grid;
+  grid-template-columns: 1fr 420px;
+  height: 100vh;
+  gap: 16px;
+  padding: 16px;
+  overflow: hidden; /* nothing escapes the viewport */
+}
+
+.left-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0; /* let flex shrink below content size */
+  overflow: hidden; /* contain any child overflow */
+}
+
+/* Collection panel — horizontal strip */
+.collection-panel {
+  background: var(--panel);
+  border: 3px solid var(--border);
+  border-radius: 18px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0;
+  overflow: hidden;
+}
+.collection-panel header {
+  padding: 10px 14px;
+  border-right: 3px solid var(--border);
+  display: flex; flex-direction: column; align-items: flex-start;
+  gap: 6px; flex-shrink: 0;
+}
+.collection-panel h2 {
+  font-size: 14px; margin: 0; text-transform: lowercase; letter-spacing: 1px;
+}
+.btn-new {
+  background: var(--accent); color: white;
+  border: 2px solid var(--border); border-radius: 999px;
+  padding: 4px 10px; font: inherit; font-size: 13px; font-weight: bold; cursor: pointer;
+}
+.collection-list {
+  flex: 1; min-width: 0;
+  overflow-x: auto; overflow-y: hidden;
+  display: flex; flex-direction: row; gap: 10px; align-items: center;
+  padding: 10px 12px;
+  scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+}
+.collection-list::-webkit-scrollbar { height: 4px; }
+.collection-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.collection-list::-webkit-scrollbar-track { background: transparent; }
+.collection-item {
+  flex-shrink: 0;
+  width: 68px; height: 78px;
+  background: var(--soft); border: 2px solid var(--border); border-radius: 12px;
+  cursor: pointer; position: relative; overflow: hidden;
+  display: flex; flex-direction: column; transition: transform 0.1s;
+}
+.collection-item:hover { transform: translateY(-2px); }
+.collection-item.active { box-shadow: 0 0 0 3px var(--accent); }
+.collection-item .coll-thumb { flex: 1; width: 100%; overflow: hidden; position: relative; }
+.collection-item .coll-thumb svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.collection-item .name {
+  font-size: 10px; padding: 3px 5px; text-align: center;
+  background: white; border-top: 2px solid var(--border);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.collection-item .delete {
+  position: absolute; top: 3px; right: 3px;
+  background: white; border: 2px solid var(--border); border-radius: 999px;
+  width: 20px; height: 20px; font-size: 10px; padding: 0; cursor: pointer;
+  display: none; line-height: 1;
+}
+.collection-item:hover .delete { display: block; }
+.collection-empty {
+  text-align: center; padding: 10px 16px;
+  color: #aaa; font-size: 13px; flex-shrink: 0; white-space: nowrap;
+}
+
+/* Stage */
+.stage {
+  flex: 1;
+  min-height: 0; /* critical: allow shrinking below content size */
+  display: flex; flex-direction: column;
+  justify-content: center; align-items: center;
+  overflow: hidden; /* clip stage-inner so it never bleeds into collection */
+}
+.stage-inner {
+  background: var(--panel); border: 3px solid var(--border); border-radius: 24px;
+  padding: 14px; display: flex; flex-direction: column; gap: 10px;
+  width: 100%; max-width: 480px;
+  min-height: 0;
+  max-height: 100%; /* never taller than stage allows */
+  overflow-y: auto; /* scroll within stage if window is very short */
+}
+.avatar-canvas {
+  width: 100%; aspect-ratio: 1;
+  background: var(--soft); border: 2px solid var(--border); border-radius: 18px;
+  overflow: hidden; position: relative;
+}
+.avatar-canvas svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.stage-bar {
+  display: flex; gap: 7px; align-items: center;
+}
+#avatar-name {
+  flex: 1; min-width: 0;
+  padding: 8px 12px;
+  border: 2px solid var(--border); border-radius: 999px;
+  font: inherit; font-size: 14px; background: white;
+  outline: none;
+}
+#avatar-name:focus { box-shadow: 0 0 0 3px var(--accent); }
+.btn-primary {
+  background: var(--accent-2); color: white;
+  border: 2px solid var(--border); border-radius: 999px;
+  padding: 8px 16px; font: inherit; font-size: 14px; font-weight: bold;
+  cursor: pointer; white-space: nowrap;
+}
+.stage-bar button:not(.btn-primary) {
+  background: white; border: 2px solid var(--border); border-radius: 999px;
+  padding: 8px 12px; font: inherit; font-size: 14px; cursor: pointer;
+  white-space: nowrap;
+}
+.stage-bar button:not(.btn-primary):hover { background: var(--soft); }
+
+/* Customize */
+.customize {
+  background: var(--panel); border: 3px solid var(--border); border-radius: 18px;
+  display: flex; flex-direction: column;
+  min-height: 0; /* grid child must opt in to shrinking */
+  overflow: hidden;
+}
+.tab-bar {
+  display: flex; flex-wrap: wrap; gap: 4px; padding: 10px;
+  border-bottom: 3px solid var(--border); background: var(--soft);
+}
+.tab-bar button {
+  background: white; border: 2px solid var(--border); border-radius: 999px;
+  padding: 8px 16px; cursor: pointer; font: inherit; font-size: 14px;
+  text-transform: lowercase;
+}
+.tab-bar button.active {
+  background: var(--accent); color: white;
+}
+.part-grid {
+  flex: 1; min-height: 0; padding: 12px; overflow-y: scroll;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+  align-content: start;
+  scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+}
+.part-grid::-webkit-scrollbar { width: 6px; }
+.part-grid::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.part-grid::-webkit-scrollbar-track { background: transparent; }
+.part-option {
+  background: var(--soft); border: 2px solid var(--border); border-radius: 12px;
+  cursor: pointer; position: relative; overflow: hidden;
+}
+.part-option:hover { background: white; }
+.part-option.active { box-shadow: 0 0 0 3px var(--accent); background: white; }
+.part-option svg {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%; display: block;
+}
+
+[data-title] { position: relative; }
+[data-title]:hover::after {
+  content: attr(data-title);
+  position: absolute;
+  bottom: calc(100% + 5px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #2d2333;
+  color: #fff;
+  padding: 4px 9px;
+  border-radius: 7px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 200;
+  pointer-events: none;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+}
+
+.part-grid.swatch-grid { grid-template-columns: repeat(5, 1fr); }
+.swatch {
+  aspect-ratio: 1; border: 3px solid var(--border); border-radius: 50%; cursor: pointer;
+}
+.swatch.active { box-shadow: 0 0 0 3px var(--accent); }
+
+/* Collection renderer badge */
+.renderer-badge {
+  position: absolute; top: 4px; left: 4px;
+  background: var(--accent-2); color: white;
+  font-size: 9px; padding: 2px 6px; border-radius: 999px;
+  border: 1.5px solid var(--border); pointer-events: none;
+  white-space: nowrap; max-width: 80%; overflow: hidden; text-overflow: ellipsis;
+}
+.collection-item.cross-renderer { opacity: 0.85; }
+
+/* Renderer modal */
+.renderer-modal {
+  position: fixed; inset: 0; z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+}
+.renderer-modal[hidden] { display: none; }
+.renderer-modal-backdrop {
+  position: absolute; inset: 0; background: rgba(0,0,0,0.45);
+}
+.renderer-modal-inner {
+  position: relative; z-index: 1;
+  background: var(--panel); border: 3px solid var(--border); border-radius: 18px;
+  padding: 20px; width: min(640px, 92vw); max-height: 85vh;
+  display: flex; flex-direction: column; gap: 14px; overflow: hidden;
+}
+.renderer-modal-header {
+  display: flex; justify-content: space-between; align-items: center;
+}
+.renderer-modal-header h3 { margin: 0; font-size: 16px; text-transform: lowercase; letter-spacing: 1px; }
+.renderer-modal-header button {
+  background: none; border: 2px solid var(--border); border-radius: 999px;
+  width: 28px; height: 28px; cursor: pointer; font-size: 12px;
+  display: flex; align-items: center; justify-content: center;
+}
+.renderer-grid {
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;
+  overflow-y: auto; padding: 4px 4px 4px;
+}
+.renderer-card {
+  background: var(--soft); border: 2px solid var(--border); border-radius: 12px;
+  cursor: pointer; overflow: hidden; transition: transform 0.1s;
+}
+.renderer-card:hover { transform: translateY(-2px); background: white; }
+.renderer-card.active { box-shadow: 0 0 0 3px var(--accent); background: white; }
+.renderer-preview {
+  aspect-ratio: 1; position: relative; overflow: hidden;
+  background: var(--soft);
+}
+.renderer-preview svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.renderer-label {
+  padding: 5px 6px; text-align: center; font-size: 11px;
+  background: white; border-top: 2px solid var(--border);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+@media (max-width: 900px) {
+  /* Single column, natural page scroll — no fixed heights */
+  .app {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: 100svh;
+    overflow: visible;
+    padding: 10px;
+    gap: 10px;
+  }
+
+  /* Reorder: collection strip first, then stage */
+  .left-col { overflow: visible; gap: 10px; }
+  .collection-panel { order: -1; }
+  .stage { flex: none; overflow: visible; }
+  .stage-inner { max-height: none; overflow-y: visible; max-width: none; padding: 10px; gap: 8px; }
+
+  /* Selector: compact tabs, 4-column grid, page scrolls */
+  .customize { min-height: auto; }
+  .tab-bar { padding: 6px 8px; gap: 3px; }
+  .tab-bar button { padding: 5px 10px; font-size: 12px; }
+  .part-grid {
+    grid-template-columns: repeat(4, 1fr);
+    overflow-y: visible;
+    padding: 8px;
+    gap: 7px;
+  }
+  .part-grid.swatch-grid { grid-template-columns: repeat(7, 1fr); }
+}
